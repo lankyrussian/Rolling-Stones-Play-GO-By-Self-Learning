@@ -5,12 +5,32 @@ from Game import Game
 from .GoLogic import Board
 import numpy as np
 import rospy
+from std_msgs.msg import Int8MultiArray, Bool, UInt8
 
 
 class ROSGoGame(Game):
     def __init__(self, n=15, nir=5):
         self.n = n
         self.n_in_row = nir
+        # ROS
+        # flag indicating if robot stones are moved to their positions,
+        # and the next move can be made
+        self.board_ready = False
+        # we will publish a flat int array to GoBoard/board on every move
+        self.pub = rospy.Publisher('board', Int8MultiArray, queue_size=10)
+        rospy.init_node('GoBoard', anonymous=True)
+        # the robot controller will report when the robots are in positions
+        rospy.Subscriber('board_ready', Bool, self.boardReadyCB)
+        # if someone asks for the board info, we will send it after hearing from this topic
+        rospy.Subscriber('info', Int8MultiArray, self.boardInfoCB)
+
+    def boardReadyCB(self, data: Bool):
+        self.board_ready = data.data
+
+    def boardInfoCB(self, _: Bool):
+        info_msg = UInt8()
+        info_msg.data = self.n
+        self.pub.publish(info_msg)
 
     def getInitBoard(self):
         # return initial board (numpy board)
@@ -25,6 +45,12 @@ class ROSGoGame(Game):
         # return number of actions
         return self.n * self.n + 1
 
+    def sendBoardToROS(self, board):
+        # send board to ROS
+        board_msg = Int8MultiArray()
+        board_msg.data = board.flatten().tolist()
+        self.pub.publish(board_msg)
+
     def getNextState(self, board, player, action):
         # if player takes action on board, return next (board,player)
         # action must be a valid move
@@ -34,6 +60,7 @@ class ROSGoGame(Game):
         b.pieces = np.copy(board)
         move = (int(action / self.n), action % self.n)
         b.execute_move(move, player)
+        self.sendBoardToROS(b.pieces)
         return (b.pieces, -player)
 
     # modified
