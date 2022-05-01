@@ -1,0 +1,13 @@
+<launch>
+    <!-- Set arguments. Change values in this section to control various parameters of execution. -->
+    <!-- There are some parameters that can be changed in other launch files but you should generally leave them as they are -->
+    <!-- ********** START OF SECTION ********** -->
+    <arg name="player1" default="h"/>       <!-- player 1 type (human, random, or ai). -->
+    <arg name="player2" default="r"/>       <!-- player 2 type (human, random, or ai). -->
+    <arg name="board_size" default="5"/>    <!-- The size of the board. -->
+    <arg name="num_games" default="1"/>     <!-- How many games to run. -->
+    <!-- *********** END OF SECTION *********** -->
+
+    <node name="goboard" pkg="goboard" type="play.py" />
+
+</launch>

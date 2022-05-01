@@ -1,7 +1,8 @@
+"from sphero_formation commit 0ac14aad3"
+
 from __future__ import print_function
-import sys
-sys.path.append('../../alpha-zero-general/')
-from Game import Game
+
+from .Game import Game
 from .GoLogic import Board
 import numpy as np
 import rospy
