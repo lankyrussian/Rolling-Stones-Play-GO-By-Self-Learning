@@ -24,7 +24,7 @@ def main():
     player1 = args.player1
     player2 = args.player2
 
-    g = ROSGoGame()
+    g = ROSGoGame(board_size)
 
     # all players
 
@@ -59,4 +59,4 @@ def main():
 
     arena = Arena(player1, player2, g, display=ROSGoGame.display)
 
-    print(arena.playGames(2, verbose=True))
+    print(arena.playGames(num_games, verbose=True))
