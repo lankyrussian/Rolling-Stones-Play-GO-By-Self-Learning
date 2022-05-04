@@ -58,6 +58,6 @@ def main():
     else:
         player2 = players[player2[0]]
 
-    arena = Arena(player1, player2, g, display=GobangGame.display)
+    arena = Arena(player1, player2, g, display=ROSGoGame.display)
 
     print(arena.playGames(num_games, verbose=True))
