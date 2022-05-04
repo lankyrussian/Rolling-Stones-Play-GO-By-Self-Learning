@@ -10,7 +10,7 @@ from std_msgs.msg import Int8MultiArray, Bool, UInt8
 
 
 class ROSGoGame(Game):
-    def __init__(self, n=15, nir=5):
+    def __init__(self, n=5, nir=5):
         self.n = n
         self.n_in_row = nir
         # ROS

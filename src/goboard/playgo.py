@@ -5,18 +5,18 @@ from .Arena import Arena
 from .MCTS import MCTS
 from .kerasclasses.NNet import NNetWrapper as NNet
 
-from .GoGame import ROSGoGame
+from .ROSGoGame import ROSGoGame
 from .GoPlayers import RandomPlayer, HumanGoPlayer, GreedyGobangPlayer
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('__name', type=str, default='goboard')
-    parser.add_argument('__log', type=str, default='log.txt')
+    parser.add_argument('__name',       type=str, default='goboard')
+    parser.add_argument('__log',        type=str, default='log.txt')
     parser.add_argument('--board_size', type=int, default=5)
-    parser.add_argument('--num_games', type=int, default=1)
-    parser.add_argument('--player1', type=str, default='human')
-    parser.add_argument('--player2', type=str, default='random')
+    parser.add_argument('--num_games',  type=int, default=2)
+    parser.add_argument('--player1',    type=str, default='human')
+    parser.add_argument('--player2',    type=str, default='random')
 
     args = parser.parse_args()
     board_size = args.board_size
@@ -25,6 +25,7 @@ def main():
     player2 = args.player2
 
     g = ROSGoGame(board_size)
+    # g = GobangGame(board_size)
 
     # all players
 
@@ -57,6 +58,6 @@ def main():
     else:
         player2 = players[player2[0]]
 
-    arena = Arena(player1, player2, g, display=ROSGoGame.display)
+    arena = Arena(player1, player2, g, display=GobangGame.display)
 
     print(arena.playGames(num_games, verbose=True))

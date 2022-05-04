@@ -2,8 +2,9 @@ import sys
 sys.path.append('../gobang')
 
 import argparse
-from keras.models import *
-from keras.layers import *
+
+from tensorflow.keras.models import *
+from tensorflow.keras.layers import *
 import tensorflow as tf
 
 
