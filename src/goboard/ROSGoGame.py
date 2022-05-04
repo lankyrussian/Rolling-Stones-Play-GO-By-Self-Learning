@@ -1,7 +1,8 @@
+"from sphero_formation commit 0ac14aad3"
+
 from __future__ import print_function
-import sys
-sys.path.append('../../alpha-zero-general/')
-from Game import Game
+
+from .Game import Game
 from .GoLogic import Board
 import numpy as np
 import rospy
@@ -9,7 +10,7 @@ from std_msgs.msg import Int8MultiArray, Bool, UInt8
 
 
 class ROSGoGame(Game):
-    def __init__(self, n=15, nir=5):
+    def __init__(self, n=5, nir=5):
         self.n = n
         self.n_in_row = nir
         # ROS
