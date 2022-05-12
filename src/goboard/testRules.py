@@ -14,7 +14,7 @@ def testAreaCalculation():
         [1, 1, 1, 0, 0],
         [-1, 0, 1, 0, 0]
     ])
-    print(Board.territory(board, 1))
+    print(Board.get_territory(board, 1))
 
 
 def boardToPlan(board):
@@ -32,14 +32,6 @@ def boardToPlan(board):
 
 
 if __name__ == "__main__":
-    # board = np.array([
-    #     [0, 1, 1, 0, 0],
-    #     [1, 0, 1, 1, 0],
-    #     [1, 0, 0, 1, 0],
-    #     [1, 1, 1, 0, 0],
-    #     [1, 0, 1, 0, 0]
-    # ])
-
     board = np.ones((5,5))
 
     for x in boardToPlan(board):

@@ -30,7 +30,8 @@ class HumanGoPlayer(GoPlayer):
         valid = self.game.getValidMoves(board, 1)
         for i in range(len(valid)):
             if valid[i]:
-                print(int(i/self.game.n), int(i%self.game.n))
+                print(int(i/self.game.n), int(i%self.game.n), end=" ")
+        print("")
         while True:
             a = input()
 
