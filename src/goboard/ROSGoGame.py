@@ -13,6 +13,7 @@ class ROSGoGame(Game):
     def __init__(self, n=5, nir=5):
         self.n = n
         self.n_in_row = nir
+        self.b = Board(self.n)
         # ROS
         # flag indicating if robot stones are moved to their positions,
         # and the next move can be made
@@ -57,20 +58,21 @@ class ROSGoGame(Game):
         # action must be a valid move
         if action == self.n * self.n:
             return (board, -player)
-        b = Board(self.n)
-        b.pieces = np.copy(board)
+        self.b.pieces = np.copy(board)
+        old_board = np.copy(self.b.pieces)
         move = (int(action / self.n), action % self.n)
-        b.execute_move(move, player)
-        self.sendBoardToROS(b.pieces)
-        return (b.pieces, -player)
+        self.b.execute_move(move, player)
+        board_diff = self.b.pieces - old_board
+        self.sendBoardToROS(board_diff)
+        return (self.b.pieces, -player)
 
     # modified
     def getValidMoves(self, board, player):
         # return a fixed size binary vector
         valids = [0] * self.getActionSize()
-        b = Board(self.n)
-        b.pieces = np.copy(board)
-        legalMoves = b.get_legal_moves(player)
+
+        self.b.pieces = np.copy(board)
+        legalMoves = self.b.get_legal_moves(player)
         if len(legalMoves) == 0:
             valids[-1] = 1
             return np.array(valids)
