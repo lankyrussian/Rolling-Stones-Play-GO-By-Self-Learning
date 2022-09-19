@@ -13,6 +13,8 @@ class Board():
         self.pieces = [None]*self.n
         for i in range(self.n):
             self.pieces[i] = [0]*self.n
+        self.history = []
+        self.history.append(self.pieces.copy())
 
     # add [][] indexer syntax to the Board
     def __getitem__(self, index): 
@@ -28,7 +30,11 @@ class Board():
         for y in range(self.n):
             for x in range(self.n):
                 if self[x][y] == 0:
-                    moves.add((x, y))
+                    # check if the position is repeated
+                    new_board = self.pieces.copy()
+                    new_board[x][y] = color
+                    if new_board not in self.boards:
+                        moves.add((x, y))
         return list(moves)
 
     def has_legal_moves(self):
@@ -83,3 +89,4 @@ class Board():
         (x,y) = move
         assert self[x][y] == 0
         self[x][y] = color
+        self.history.append(self.pieces.copy())

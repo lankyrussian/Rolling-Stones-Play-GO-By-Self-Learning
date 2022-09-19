@@ -2,8 +2,14 @@
 import numpy as np
 
 
-class RandomPlayer():
+class GoPlayer:
+    def __init__(self):
+        self.passed_last_turn = False
+
+
+class RandomPlayer(GoPlayer):
     def __init__(self, game):
+        super().__init__()
         self.game = game
 
     def play(self, board):
@@ -14,8 +20,9 @@ class RandomPlayer():
         return a
 
 
-class HumanGoPlayer():
+class HumanGoPlayer(GoPlayer):
     def __init__(self, game):
+        super().__init__()
         self.game = game
 
     def play(self, board):
@@ -37,8 +44,9 @@ class HumanGoPlayer():
         return a
 
 
-class GreedyGobangPlayer():
+class GreedyGobangPlayer(GoPlayer):
     def __init__(self, game):
+        super().__init__()
         self.game = game
 
     def play(self, board):

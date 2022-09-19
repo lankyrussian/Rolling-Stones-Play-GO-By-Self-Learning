@@ -24,6 +24,8 @@ class ROSGoGame(Game):
         rospy.Subscriber('board_ready', Bool, self.boardReadyCB)
         # if someone asks for the board info, we will send it after hearing from this topic
         rospy.Subscriber('info', Int8MultiArray, self.boardInfoCB)
+        # keep track of consecutive passes
+        self.pass_count = 0
 
     def boardReadyCB(self, data: Bool):
         self.board_ready = data.data
@@ -86,20 +88,10 @@ class ROSGoGame(Game):
         b.pieces = np.copy(board)
         n = self.n_in_row
 
-        for w in range(self.n):
-            for h in range(self.n):
-                if (w in range(self.n - n + 1) and board[w][h] != 0 and
-                        len(set(board[i][h] for i in range(w, w + n))) == 1):
-                    return board[w][h]
-                if (h in range(self.n - n + 1) and board[w][h] != 0 and
-                        len(set(board[w][j] for j in range(h, h + n))) == 1):
-                    return board[w][h]
-                if (w in range(self.n - n + 1) and h in range(self.n - n + 1) and board[w][h] != 0 and
-                        len(set(board[w + k][h + k] for k in range(n))) == 1):
-                    return board[w][h]
-                if (w in range(self.n - n + 1) and h in range(n - 1, self.n) and board[w][h] != 0 and
-                        len(set(board[w + l][h - l] for l in range(n))) == 1):
-                    return board[w][h]
+        # both players passed
+        if self.pass_count == 2:
+            return 1 if b.countDiff() > 0 else -1 if b.countDiff() < 0 else 0.5
+
         if b.has_legal_moves():
             return 0
         return 1e-4
