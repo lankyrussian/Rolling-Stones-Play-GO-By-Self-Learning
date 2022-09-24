@@ -58,8 +58,8 @@ class ROSGoGame(Game):
         # action must be a valid move
         if action == self.n * self.n:
             return (board, -player)
-        self.b.pieces = np.copy(board)
-        old_board = np.copy(self.b.pieces)
+        self.b.pieces = np.deepcopy(board)
+        old_board = np.deepcopy(self.b.pieces)
         move = (int(action / self.n), action % self.n)
         self.b.execute_move(move, player)
         board_diff = self.b.pieces - old_board
@@ -71,7 +71,7 @@ class ROSGoGame(Game):
         # return a fixed size binary vector
         valids = [0] * self.getActionSize()
 
-        self.b.pieces = np.copy(board)
+        self.b.pieces = np.deepcopy(board)
         legalMoves = self.b.get_legal_moves(player)
         if len(legalMoves) == 0:
             valids[-1] = 1
@@ -85,7 +85,7 @@ class ROSGoGame(Game):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
         b = Board(self.n)
-        b.pieces = np.copy(board)
+        b.pieces = np.deepcopy(board)
         n = self.n_in_row
 
         for w in range(self.n):
