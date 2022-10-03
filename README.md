@@ -1,20 +1,4 @@
-rolling stones play go
-
-## installation
-
-1. ROS2: [ROS2 installation instructions](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
-
-2. Package dependencies:    
-refer to [ros2 workspace setup instructions](https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).   
-ROS uses system python3 interpreter. Use `python -m pip install <package>` to manually install tensorflow, keras, and ros-related packages.
-If you are using conda, make sure to deactivate the current environment before installing.
-
-bluez:   
-`python3 -m pip install setuptools==57.5.0`    
-`python3 -m pip install bluez`
-
-3. clone sphero_ros: https://github.com/mmwise/sphero_ros   
-`git clone git@github.com:mmwise/sphero_ros.git` 
+Playing Go with Sphero robots
 
 ## Docker
 
@@ -46,3 +30,4 @@ Bluetooth scanning isn't working in python, while it works in bluetoothctl.
 
 [alpha-zero-general](https://github.com/suragnair/alpha-zero-general)   
 [sphero_formation (0ac14aad3)](https://github.com/mkrizmancic/sphero_formation)
+[sphero_ros](github.com:mmwise/sphero_ros)
