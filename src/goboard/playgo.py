@@ -1,18 +1,18 @@
 import argparse
 import numpy as np
 
-from .Arena import Arena
-from .MCTS import MCTS
-from .kerasclasses.NNet import NNetWrapper as NNet
+from Arena import Arena
+from MCTS import MCTS
+from kerasclasses.NNet import NNetWrapper as NNet
 
-from .ROSGoGame import ROSGoGame
-from .GoPlayers import RandomPlayer, HumanGoPlayer, GreedyGobangPlayer
+from ROSGoGame import ROSGoGame
+from GoPlayers import RandomPlayer, HumanGoPlayer, GreedyGobangPlayer
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('__name',       type=str, default='goboard')
-    parser.add_argument('__log',        type=str, default='log.txt')
+    parser.add_argument('--name',       type=str, default='goboard')
+    parser.add_argument('--log',        type=str, default='log.txt')
     parser.add_argument('--board_size', type=int, default=5)
     parser.add_argument('--num_games',  type=int, default=2)
     parser.add_argument('--player1',    type=str, default='human')

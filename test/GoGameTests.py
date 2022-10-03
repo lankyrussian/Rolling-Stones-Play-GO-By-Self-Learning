@@ -28,7 +28,6 @@ class TestGoLogic(unittest.TestCase):
             [1, 1, 1, 0, 0],
             [-1, 0, 1, 0, 0]
         ])
-        print(Board.get_territory(board, 1))
 
     def test_count_liberties(self):
         board = np.array([

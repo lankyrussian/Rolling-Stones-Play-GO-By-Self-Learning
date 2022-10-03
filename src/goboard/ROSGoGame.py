@@ -2,18 +2,19 @@
 
 from __future__ import print_function
 
-from .Game import Game
-from .GoLogic import Board
+from Game import Game
+from GoLogic import Board
 import numpy as np
+from copy import deepcopy
 import rospy
 from std_msgs.msg import Int8MultiArray, Bool, UInt8
 
 
 class ROSGoGame(Game):
-    def __init__(self, n=5, nir=5):
+    def __init__(self, n=5):
         self.n = n
-        self.n_in_row = nir
         self.b = Board(self.n)
+        self.pass_count = 0
         # ROS
         # flag indicating if robot stones are moved to their positions,
         # and the next move can be made
@@ -56,11 +57,13 @@ class ROSGoGame(Game):
     def getNextState(self, board, player, action):
         # if player takes action on board, return next (board,player)
         # action must be a valid move
-        if action == self.n * self.n:
-            return (board, -player)
-        self.b.pieces = np.deepcopy(board)
-        old_board = np.deepcopy(self.b.pieces)
         move = (int(action / self.n), action % self.n)
+        if move == self.b.PASS:
+            self.pass_count += 1
+            return (board, -player)
+        self.pass_count = 0
+        self.b.pieces = deepcopy(board)
+        old_board = deepcopy(self.b.pieces)
         self.b.execute_move(move, player)
         board_diff = self.b.pieces - old_board
         self.sendBoardToROS(board_diff)
@@ -71,7 +74,7 @@ class ROSGoGame(Game):
         # return a fixed size binary vector
         valids = [0] * self.getActionSize()
 
-        self.b.pieces = np.deepcopy(board)
+        self.b.pieces = deepcopy(board)
         legalMoves = self.b.get_legal_moves(player)
         if len(legalMoves) == 0:
             valids[-1] = 1
@@ -85,26 +88,17 @@ class ROSGoGame(Game):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
         b = Board(self.n)
-        b.pieces = np.deepcopy(board)
-        n = self.n_in_row
-
-        for w in range(self.n):
-            for h in range(self.n):
-                if (w in range(self.n - n + 1) and board[w][h] != 0 and
-                        len(set(board[i][h] for i in range(w, w + n))) == 1):
-                    return board[w][h]
-                if (h in range(self.n - n + 1) and board[w][h] != 0 and
-                        len(set(board[w][j] for j in range(h, h + n))) == 1):
-                    return board[w][h]
-                if (w in range(self.n - n + 1) and h in range(self.n - n + 1) and board[w][h] != 0 and
-                        len(set(board[w + k][h + k] for k in range(n))) == 1):
-                    return board[w][h]
-                if (w in range(self.n - n + 1) and h in range(n - 1, self.n) and board[w][h] != 0 and
-                        len(set(board[w + l][h - l] for l in range(n))) == 1):
-                    return board[w][h]
-        if b.has_legal_moves():
+        b.pieces = deepcopy(board)
+        if b.has_legal_moves() and self.pass_count != 2:
             return 0
-        return 1e-4
+        # game ended
+        black_score = b.calculate_score(-1)
+        white_score = b.calculate_score(1)
+        if black_score > white_score:
+            return -1
+        elif black_score < white_score:
+            return 1
+        return 0.5
 
     def getCanonicalForm(self, board, player):
         # return state if player==1, else return -state if player==-1

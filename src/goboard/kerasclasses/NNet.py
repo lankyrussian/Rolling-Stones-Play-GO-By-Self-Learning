@@ -6,7 +6,7 @@ import random
 import numpy as np
 import math
 import sys
-import tensorflow as tf
+import tensorflow as tflow
 sys.path.append('../gobang')
 from .NeuralNet import NeuralNet
 
@@ -50,7 +50,7 @@ args = dotdict({
 
 class NNetWrapper(NeuralNet):
     def __init__(self, game):
-        self.graph = tf.compat.v1.get_default_graph()
+        self.graph = tflow.compat.v1.get_default_graph()
         self.nnet = onnet(game, args)
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()

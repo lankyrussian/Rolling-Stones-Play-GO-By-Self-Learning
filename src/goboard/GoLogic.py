@@ -12,6 +12,7 @@ class Board():
     def __init__(self, n):
         "Set up initial board configuration."
         self.n = n
+        self.PASS = (n,0)
         # Create the empty board array.
         self.pieces = np.zeros((n, n), dtype=int)
         self.board_history = np.zeros((n**2, n, n), dtype=int)
@@ -44,7 +45,7 @@ class Board():
         """Returns all the legal moves for the given color.
         (1 for white, -1 for black
         """
-        moves = set()  # stores the legal moves.
+        moves = {self.PASS}  # stores the legal moves.
 
         # Get all empty locations.
         for y in range(self.n):
