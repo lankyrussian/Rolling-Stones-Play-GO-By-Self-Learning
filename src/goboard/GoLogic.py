@@ -5,31 +5,37 @@ Author: Vlad
 import queue
 
 import numpy as np
+from copy import deepcopy
 
 
 class Board():
     def __init__(self, n):
         "Set up initial board configuration."
         self.n = n
+        self.PASS = (n,0)
         # Create the empty board array.
         self.pieces = np.zeros((n, n), dtype=int)
-        self.board_history = np.zeros((n*2, n, n), dtype=int)
+        self.board_history = np.zeros((n**2, n, n), dtype=int)
         self.move_number = 0
         self.previous_passed = False
+        self.captured_stones = {-1: 0, 1: 0}
 
     # add [][] indexer syntax to the Board
     def __getitem__(self, index): 
         return self.pieces[index]
 
-    def is_legal_move(self, piece, move):
+    def is_legal_move(self, color, move):
         """Returns True if the move is legal.
         """
         # not occupied
         if self.pieces[move] != 0:
             return False
         # doesn't result in a repeated position
-        new_board = self.pieces.copy()
-        new_board[move] = piece
+        new_board = deepcopy(self.pieces)
+        new_board[move] = color
+        idxs, captured = Board.get_captured(new_board, move, color)
+        for i in idxs:
+            new_board[i] = 0
         for board in self.board_history[:self.move_number, :, :]:
             if np.array_equal(new_board, board):
                 return False
@@ -39,7 +45,7 @@ class Board():
         """Returns all the legal moves for the given color.
         (1 for white, -1 for black
         """
-        moves = set()  # stores the legal moves.
+        moves = {self.PASS}  # stores the legal moves.
 
         # Get all empty locations.
         for y in range(self.n):
@@ -81,7 +87,7 @@ class Board():
         territory = 0
         assert color in [-1, 1]
         # copy of the board to avlid recalculating the counted territories
-        board_copy = np.copy(board)
+        board_copy = deepcopy(board)
         visited_code = -2
         # Get all enclosed empty locations.
         for y in range(board.shape[0]):
@@ -91,13 +97,6 @@ class Board():
                         territory += np.sum(board_copy[board_copy == visited_code]/visited_code)
                     visited_code -= 1
         return territory
-
-    @staticmethod
-    def get_seki(board, color):
-        """"group is in seki if playing in it will result in its loss (like having one eye)"""
-        seki = 0
-        assert color in [-1, 1]
-
 
     @staticmethod
     def count_liberties(board, piece):
@@ -128,39 +127,47 @@ class Board():
     def get_captured(board, move, color):
         """Returns np indexes captured pieces after the move
         """
+        captured = {-1:0, 1:0}
         (x,y) = move
-        board_copy = np.copy(board)
+        # board_copy = deepcopy(board)
         idxs = []
         # check for captures in all directions
         for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
-            board_copy = np.copy(board)
+            board_copy = deepcopy(board)
             # capturing enemy group
             if Board.mark_enclosed_recurse(board_copy, color, 0, x + dx, y + dy, -2, -color):
-                idxs.append(np.where(board_copy == -2))
+                cap = np.where(board_copy == -2)
+                if len(cap[0]) > 0:
+                    idxs.append(cap)
 
         if len(idxs) > 0:
-            return idxs
+            captured[-color] = len(idxs[0][0])
+            return idxs, captured
 
-        for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1), (0,0)]:
-            board_copy = np.copy(board)
-            # capturing own group
-            if Board.mark_enclosed_recurse(board_copy, -color, 0, x + dx, y + dy, -2, color):
-                idx = np.where(board_copy == -2)
+        # for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1), (0,0)]:
+        board_copy = deepcopy(board)
+        # capturing own group
+        if Board.mark_enclosed_recurse(board_copy, -color, 0, x, y, -2, color):
+            idx = np.where(board_copy == -2)
+            if len(idx[0]) > 0:
                 board_copy[idx] = 0
-
+                idxs.append(idx)
+                captured[color] += len(idx[0])
+        else:
+            board_copy[x,y] = color
         # remove captured pieces
-        idx = np.where(board_copy == -2)
+        # idx = np.where(board_copy == -2)[0]
 
-        return idx
+        return idxs, captured
 
-    @staticmethod
-    def calculate_score(board, color):
+    def calculate_score(self, color):
         """Returns the score of the board for the given color.
-        score = territory - (seki stones + captured stones) (+ komi if you are white)"""
-        score = 0
-        territory = Board.get_territory(board, color)
-        # seki =
-
+        score = territory - (seki stones + captured stones) (+ komi if you are white)
+        in this version we don't count seki
+        """
+        board = deepcopy(self.pieces)
+        n_stones = np.sum(board == color)
+        return Board.get_territory(board, color) - self.captured_stones[color] + n_stones
 
     def execute_move(self, move, color):
         """Perform the given move on the board; flips pieces as necessary.
@@ -168,9 +175,13 @@ class Board():
         """
         (x,y) = move
         assert self[x][y] == 0
-        self[x][y] = color
-        idx = Board.get_captured(self.pieces, move, color)
+        self.pieces[x][y] = color
+        idx, captured = Board.get_captured(self.pieces, move, color)
         for i in idx:
             self.pieces[i] = 0
+        self.captured_stones[color] += captured[color]
+        self.captured_stones[-color] += captured[-color]
         self.move_number += 1
-        self.board_history[self.move_number] = np.copy(self.pieces)
+        if self.move_number == self.board_history.shape[0]:
+            self.board_history = np.append(self.board_history, np.zeros((self.move_number, self.n, self.n)), axis=0)
+        self.board_history[self.move_number] = deepcopy(self.pieces)
