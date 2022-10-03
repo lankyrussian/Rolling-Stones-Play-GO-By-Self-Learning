@@ -32,6 +32,11 @@ bluez and other dependencies are included in the image
 4. `roscore > /dev/null &`    
 5. `cd /rosws/src/sphero_ros/sphero_nodes/nodes/ && python3 sphero.py`
    
+### Run a go game against a random agent
+1. `docker run -it --privileged --net=host --name rspg rspg`
+2. `source /rosws/install/setup.bash`
+3. `roscore > /dev/null &`
+4. `cd /rosws/src/Rolling-Stones-Play-GO-By-Self-Learning/src/ && python3 play.py`
 
 ## Known Issues
 
