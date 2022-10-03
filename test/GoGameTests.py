@@ -1,8 +1,11 @@
 """unit tests for go game rules and utilties"""
+import sys
+
 import numpy as np
 import unittest
 
-from GoLogic import Board
+sys.path.append('goboard')
+from goboard.GoLogic import Board
 from src.goboard import GoLogic
 
 
