@@ -14,7 +14,7 @@ class Board():
         self.n = n
         # Create the empty board array.
         self.pieces = np.zeros((n, n), dtype=int)
-        self.board_history = np.zeros((n*2, n, n), dtype=int)
+        self.board_history = np.zeros((n**2, n, n), dtype=int)
         self.move_number = 0
         self.previous_passed = False
         self.captured_stones = {-1: 0, 1: 0}
@@ -32,7 +32,7 @@ class Board():
         # doesn't result in a repeated position
         new_board = deepcopy(self.pieces)
         new_board[move] = color
-        idxs = Board.get_captured(new_board, move, color)
+        idxs, captured = Board.get_captured(new_board, move, color)
         for i in idxs:
             new_board[i] = 0
         for board in self.board_history[:self.move_number, :, :]:
@@ -98,12 +98,6 @@ class Board():
         return territory
 
     @staticmethod
-    def get_seki(board, color):
-        """"group is in seki if playing in it will result in its loss (like having one eye)"""
-        seki = 0
-        assert color in [-1, 1]
-
-    @staticmethod
     def count_liberties(board, piece):
         """Returns the number of liberties of the group that piece belongs to.
         """
@@ -132,6 +126,7 @@ class Board():
     def get_captured(board, move, color):
         """Returns np indexes captured pieces after the move
         """
+        captured = {-1:0, 1:0}
         (x,y) = move
         # board_copy = deepcopy(board)
         idxs = []
@@ -140,23 +135,29 @@ class Board():
             board_copy = deepcopy(board)
             # capturing enemy group
             if Board.mark_enclosed_recurse(board_copy, color, 0, x + dx, y + dy, -2, -color):
-                idxs.append(np.where(board_copy == -2))
+                cap = np.where(board_copy == -2)
+                if len(cap[0]) > 0:
+                    idxs.append(cap)
 
         if len(idxs) > 0:
-            return idxs
+            captured[-color] = len(idxs[0][0])
+            return idxs, captured
 
-        for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1), (0,0)]:
-            board_copy = deepcopy(board)
-            # capturing own group
-            if Board.mark_enclosed_recurse(board_copy, -color, 0, x + dx, y + dy, -2, color):
-                idx = np.where(board_copy == -2)
+        # for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1), (0,0)]:
+        board_copy = deepcopy(board)
+        # capturing own group
+        if Board.mark_enclosed_recurse(board_copy, -color, 0, x, y, -2, color):
+            idx = np.where(board_copy == -2)
+            if len(idx[0]) > 0:
                 board_copy[idx] = 0
-            else:
-                board_copy[x,y] = color
+                idxs.append(idx)
+                captured[color] += len(idx[0])
+        else:
+            board_copy[x,y] = color
         # remove captured pieces
-        idx = np.where(board_copy == -2)
+        # idx = np.where(board_copy == -2)[0]
 
-        return idx
+        return idxs, captured
 
     def calculate_score(self, color):
         """Returns the score of the board for the given color.
@@ -164,7 +165,8 @@ class Board():
         in this version we don't count seki
         """
         board = deepcopy(self.pieces)
-        return Board.get_territory(board, color) - self.captured_stones[color]
+        n_stones = np.sum(board == color)
+        return Board.get_territory(board, color) - self.captured_stones[color] + n_stones
 
     def execute_move(self, move, color):
         """Perform the given move on the board; flips pieces as necessary.
@@ -173,8 +175,12 @@ class Board():
         (x,y) = move
         assert self[x][y] == 0
         self.pieces[x][y] = color
-        idx = Board.get_captured(self.pieces, move, color)
+        idx, captured = Board.get_captured(self.pieces, move, color)
         for i in idx:
             self.pieces[i] = 0
+        self.captured_stones[color] += captured[color]
+        self.captured_stones[-color] += captured[-color]
         self.move_number += 1
+        if self.move_number == self.board_history.shape[0]:
+            self.board_history = np.append(self.board_history, np.zeros((self.move_number, self.n, self.n)), axis=0)
         self.board_history[self.move_number] = deepcopy(self.pieces)
