@@ -6,7 +6,6 @@ import unittest
 
 sys.path.append('goboard')
 from goboard.GoLogic import Board
-from src.goboard import GoLogic
 
 
 class TestGoLogic(unittest.TestCase):

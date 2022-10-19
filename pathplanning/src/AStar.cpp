@@ -1,4 +1,4 @@
-#include "AStar.hpp"
+#include "AStar.h"
 #include <algorithm>
 #include <math.h>
 

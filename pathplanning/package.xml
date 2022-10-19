@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>planner</name>
+  <version>0.0.0</version>
+  <description>Python / ROS connector for a Go board controlled by either Alpha Zero General or human player.
+      High-level path planning module. Takes in go moves and outputs paths for stones to enter and exti the
+      board.
+  </description>
+
+  <maintainer email="vlmr.mko@gmail.com">vlad</maintainer>
+
+  <license>MIT</license>
+
+  <url type="repository">https://github.com/lankyrussian/Rolling-Stones-Play-GO-By-Self-Learning</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+
+  <build_export_depend>roscpp</build_export_depend>
+
+  <exec_depend>message_runtime</exec_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
