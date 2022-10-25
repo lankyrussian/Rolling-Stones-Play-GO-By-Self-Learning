@@ -4,10 +4,8 @@ import numpy as np
 from Arena import Arena
 from MCTS import MCTS
 from kerasclasses.NNet import NNetWrapper as NNet
-
-from ROSGoGame import ROSGoGame
 from GoPlayers import RandomPlayer, HumanGoPlayer, GreedyGobangPlayer
-
+from GoGame import GoGame
 
 def main():
     parser = argparse.ArgumentParser()
@@ -15,8 +13,11 @@ def main():
     parser.add_argument('--log',        type=str, default='log.txt')
     parser.add_argument('--board_size', type=int, default=5)
     parser.add_argument('--num_games',  type=int, default=2)
+    parser.add_argument('--com_type', type=str, default="mqtt")
     parser.add_argument('--player1',    type=str, default='human')
     parser.add_argument('--player2',    type=str, default='random')
+    parser.add_argument('--mqtt_broker', type=str, default='localhost')
+    parser.add_argument('--mqtt_port', type=int, default=1883)
 
     args = parser.parse_args()
     board_size = args.board_size
@@ -24,7 +25,14 @@ def main():
     player1 = args.player1
     player2 = args.player2
 
-    g = ROSGoGame(board_size)
+    if args.com_type == "mqtt":
+        from MQTTGoGame import MQTTGoGame
+        g = MQTTGoGame(board_size, args.mqtt_broker, args.mqtt_port)
+    elif args.com_type == "ros":
+        from ROSGoGame import ROSGoGame
+        g = ROSGoGame(board_size)
+    else:
+        raise ValueError("Invalid communication type, should be wither mqtt or ros")
     # g = GobangGame(board_size)
 
     # all players
@@ -58,6 +66,6 @@ def main():
     else:
         player2 = players[player2[0]]
 
-    arena = Arena(player1, player2, g, display=ROSGoGame.display)
+    arena = Arena(player1, player2, g, display=GoGame.display)
 
     print(arena.playGames(num_games, verbose=True))
