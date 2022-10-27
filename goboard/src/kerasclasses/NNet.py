@@ -1,16 +1,10 @@
-import argparse
 import os
-import shutil
-import time
-import random
 import numpy as np
-import math
 import sys
 import tensorflow as tflow
 sys.path.append('../gobang')
-from .NeuralNet import NeuralNet
+from NeuralNet import NeuralNet
 
-import argparse
 from .GobangNNet import GobangNNet as onnet
 
 class AverageMeter(object):

@@ -3,9 +3,10 @@ import sys
 
 import numpy as np
 import unittest
-
-sys.path.append('goboard')
-from goboard.GoLogic import Board
+import src
+# sys.path.append('goboard')
+from src.GoLogic import Board
+# from GoLogic import Board
 
 
 class TestGoLogic(unittest.TestCase):

@@ -69,3 +69,7 @@ def main():
     arena = Arena(player1, player2, g, display=GoGame.display)
 
     print(arena.playGames(num_games, verbose=True))
+
+
+if __name__ == "__main__":
+    main()
