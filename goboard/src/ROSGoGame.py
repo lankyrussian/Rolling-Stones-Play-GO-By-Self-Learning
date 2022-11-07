@@ -15,6 +15,10 @@ class ROSGoGame(GoGame):
         rospy.Subscriber('board_ready', Bool, self.boardReadyCB)
         # if someone asks for the board info, we will send it after hearing from this topic
         rospy.Subscriber('info', Int8MultiArray, self.boardInfoCB)
+        # ROS
+        # flag indicating if robot stones are moved to their positions,
+        # and the next move can be made
+        self.board_ready = False
 
     def boardReadyCB(self, data: Bool):
         self.board_ready = data.data

@@ -18,6 +18,7 @@ class Board():
         self.board_history = np.zeros((n**2, n, n), dtype=int)
         self.move_number = 0
         self.previous_passed = False
+        self.game_ended = False
         self.captured_stones = {-1: 0, 1: 0}
 
     # add [][] indexer syntax to the Board
@@ -36,7 +37,7 @@ class Board():
         idxs, captured = Board.get_captured(new_board, move, color)
         for i in idxs:
             new_board[i] = 0
-        for board in self.board_history[:self.move_number, :, :]:
+        for board in self.board_history[:self.move_number+1, :, :]:
             if np.array_equal(new_board, board):
                 return False
         return True
@@ -53,6 +54,18 @@ class Board():
                 if self.is_legal_move(color, (x, y)):
                     moves.add((x, y))
         return list(moves)
+
+    def get_game_ended(self):
+        if not self.game_ended:
+            return 0
+        # game ended
+        black_score = self.calculate_score(-1)
+        white_score = self.calculate_score(1)
+        if black_score > white_score:
+            return 1
+        elif black_score < white_score:
+            return -1
+        return 0.5
 
     def has_legal_moves(self):
         """Returns True if has legal move else False
@@ -171,7 +184,7 @@ class Board():
 
     def execute_move(self, move, color):
         """Perform the given move on the board; flips pieces as necessary.
-        color gives the color pf the piece to play (1=white,-1=black)
+        color gives the color pf the piece to play (1=black,-1=white)
         """
         (x,y) = move
         assert self[x][y] == 0

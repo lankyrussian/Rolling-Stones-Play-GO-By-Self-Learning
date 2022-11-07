@@ -11,17 +11,10 @@ from copy import deepcopy
 class GoGame(Game):
     def __init__(self, n=5):
         self.n = n
-        self.b = Board(self.n)
-        self.pass_count = 0
-        # ROS
-        # flag indicating if robot stones are moved to their positions,
-        # and the next move can be made
-        self.board_ready = False
 
     def getInitBoard(self):
         # return initial board (numpy board)
-        b = Board(self.n)
-        return np.array(b.pieces)
+        return Board(self.n)
 
     def getBoardSize(self):
         # (a,b) tuple
@@ -34,22 +27,23 @@ class GoGame(Game):
     def getNextState(self, board, player, action):
         # if player takes action on board, return next (board,player)
         # action must be a valid move
+        newboard = deepcopy(board)
         move = (int(action / self.n), action % self.n)
-        if move == self.b.PASS:
-            self.pass_count += 1
-            return (board, -player)
-        self.pass_count = 0
-        self.b.pieces = deepcopy(board)
-        self.b.execute_move(move, player)
-        return (self.b.pieces, -player)
+        if move == board.PASS:
+            if newboard.previous_passed:
+                newboard.game_ended = True
+            else:
+                newboard.previous_passed = True
+            return (newboard, -player)
+        newboard.previous_passed = False
+        newboard.execute_move(move, player)
+        return (newboard, -player)
 
     # modified
     def getValidMoves(self, board, player):
         # return a fixed size binary vector
         valids = [0] * self.getActionSize()
-
-        self.b.pieces = deepcopy(board)
-        legalMoves = self.b.get_legal_moves(player)
+        legalMoves = board.get_legal_moves(player)
         if len(legalMoves) == 0:
             valids[-1] = 1
             return np.array(valids)
@@ -61,26 +55,25 @@ class GoGame(Game):
     def getGameEnded(self, board, player):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
-        b = Board(self.n)
-        b.pieces = deepcopy(board)
-        if b.has_legal_moves() and self.pass_count != 2:
-            return 0
-        # game ended
-        black_score = b.calculate_score(-1)
-        white_score = b.calculate_score(1)
-        if black_score > white_score:
-            return -1
-        elif black_score < white_score:
-            return 1
-        return 0.5
+        return board.get_game_ended()
 
     def getCanonicalForm(self, board, player):
         # return state if player==1, else return -state if player==-1
-        return player * board
+        new_board = Board(self.n)
+        new_board.pieces = board.pieces * player
+        new_board.move_number = board.move_number
+        new_board.board_history = board.board_history * player
+        new_board.previous_passed = board.previous_passed
+        new_board.game_ended = board.game_ended
+        new_board.captured_stones = {
+            1:  board.captured_stones[ player],
+            -1: board.captured_stones[-player]}
+        return new_board
 
     # modified
-    def getSymmetries(self, board, pi):
+    def getSymmetries(self, board_, pi):
         # mirror, rotational
+        board = board_.pieces
         assert(len(pi) == self.n**2 + 1)  # 1 for pass
         pi_board = np.reshape(pi[:-1], (self.n, self.n))
         l = []
@@ -96,16 +89,18 @@ class GoGame(Game):
         return l
 
     def stringRepresentation(self, board):
-        # 8x8 numpy array (canonical board)
-        return board.tostring()
+        # the state should include the flag for 2 passes,
+        # since the MCTS only checks for the game end on a new state
+        return f"{board.pieces.tostring()}{'1' if board.game_ended else '0'}"
 
     @staticmethod
-    def display(board):
+    def display(board_):
+        board = board_.pieces
         n = board.shape[0]
 
         for y in range(n):
             print(y, "|", end="")
-        print("")
+        print(f"")
         print(" -----------------------")
         for y in range(n):
             print(y, "|", end="")    # print the row #

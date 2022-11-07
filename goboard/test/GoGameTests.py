@@ -125,3 +125,25 @@ class TestGoLogic(unittest.TestCase):
         self.assertEqual(board.captured_stones[1], 1)
         self.assertEqual(board.calculate_score(-1), -9)
         self.assertEqual(board.calculate_score(1), 22)
+
+    def test_scoring(self):
+        b = Board(5)
+        b.execute_move((0, 0), 1)
+        b.execute_move((4, 0), -1)
+        b.execute_move((0, 1), 1)
+        b.execute_move((4, 1), -1)
+        b.execute_move((0, 2), 1)
+        b.execute_move((4, 2), -1)
+        b.execute_move((0, 3), 1)
+        b.execute_move((4, 3), -1)
+        b.execute_move((0, 4), 1)
+        b.execute_move((4, 4), -1)
+        self.assertEqual(b.calculate_score(1), 5)
+        self.assertEqual(b.calculate_score(-1), 5)
+
+    def test_no_repetition(self):
+        b = Board(5)
+        b.execute_move((1, 0), 1)
+        b.execute_move((0, 1), 1)
+        valid_moves = b.get_legal_moves(-1)
+        self.assertNotIn((0, 0), valid_moves)
