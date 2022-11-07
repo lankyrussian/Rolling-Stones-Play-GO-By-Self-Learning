@@ -62,7 +62,7 @@ class GoGame(Game):
         new_board = Board(self.n)
         new_board.pieces = board.pieces * player
         new_board.move_number = board.move_number
-        new_board.board_history = board.board_history * player
+        new_board.board_history_hash = board.board_history_hash
         new_board.previous_passed = board.previous_passed
         new_board.game_ended = board.game_ended
         new_board.captured_stones = {

@@ -147,3 +147,13 @@ class TestGoLogic(unittest.TestCase):
         b.execute_move((0, 1), 1)
         valid_moves = b.get_legal_moves(-1)
         self.assertNotIn((0, 0), valid_moves)
+
+    def test_no_repetition_long(self):
+        b = Board(5)
+        b.execute_move((1, 0), 1)
+        b.execute_move((0, 0), -1)
+        b.execute_move((1, 1), 1)
+        b.execute_move((0, 1), -1)
+        b.execute_move((0, 2), 1)
+        b.execute_move((0, 0), -1)
+        self.assertNotIn((0, 1), b.get_legal_moves(-1))

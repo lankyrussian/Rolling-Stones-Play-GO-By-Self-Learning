@@ -15,7 +15,8 @@ class Board():
         self.PASS = (n,0)
         # Create the empty board array.
         self.pieces = np.zeros((n, n), dtype=int)
-        self.board_history = np.zeros((n**2, n, n), dtype=int)
+        # self.board_history = np.zeros((n**2, n, n), dtype=int)
+        self.board_history_hash = {}
         self.move_number = 0
         self.previous_passed = False
         self.game_ended = False
@@ -37,9 +38,8 @@ class Board():
         idxs, captured = Board.get_captured(new_board, move, color)
         for i in idxs:
             new_board[i] = 0
-        for board in self.board_history[:self.move_number+1, :, :]:
-            if np.array_equal(new_board, board):
-                return False
+        if Board.get_pos_hash(new_board) in self.board_history_hash:
+            return False
         return True
 
     def get_legal_moves(self, color):
@@ -173,6 +173,10 @@ class Board():
 
         return idxs, captured
 
+    @staticmethod
+    def get_pos_hash(pieces: np.array):
+        return hash(pieces.tostring())
+
     def calculate_score(self, color):
         """Returns the score of the board for the given color.
         score = territory - (seki stones + captured stones) (+ komi if you are white)
@@ -195,6 +199,7 @@ class Board():
         self.captured_stones[color] += captured[color]
         self.captured_stones[-color] += captured[-color]
         self.move_number += 1
-        if self.move_number == self.board_history.shape[0]:
-            self.board_history = np.append(self.board_history, np.zeros((self.move_number, self.n, self.n)), axis=0)
-        self.board_history[self.move_number] = deepcopy(self.pieces)
+        # if self.move_number == self.board_history.shape[0]:
+        #     self.board_history = np.append(self.board_history, np.zeros((self.move_number, self.n, self.n)), axis=0)
+        # self.board_history[self.move_number] = deepcopy(self.pieces)
+        self.board_history_hash[Board.get_pos_hash(self.pieces)] = True
