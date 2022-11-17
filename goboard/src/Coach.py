@@ -66,8 +66,11 @@ class Coach():
                 trainExamples.append([b, self.curPlayer, p, None])
 
             action = np.random.choice(len(pi), p=pi)
-            board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action)
-
+            try:
+                board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action)
+            except:
+                log.debug(f"Error in getNextState, ending game early")
+                self.game.game_ended = True
             r = self.game.getGameEnded(board, self.curPlayer)
 
             if r != 0:
