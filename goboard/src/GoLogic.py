@@ -15,12 +15,14 @@ class Board():
         self.PASS = (n,0)
         # Create the empty board array.
         self.pieces = np.zeros((n, n), dtype=int)
-        # self.board_history = np.zeros((n**2, n, n), dtype=int)
-        self.board_history_hash = {}
+        # make transition into a blank board not possible
+        # otherwise this could be done by player filling the board completely with their stones
+        self.board_history_hash = {Board.get_pos_hash(self.pieces): True}
         self.move_number = 0
         self.previous_passed = False
         self.game_ended = False
         self.captured_stones = {-1: 0, 1: 0}
+        self.next_legal_moves = (0,)
 
     # add [][] indexer syntax to the Board
     def __getitem__(self, index): 
@@ -46,13 +48,18 @@ class Board():
         """Returns all the legal moves for the given color.
         (1 for white, -1 for black
         """
-        moves = {self.PASS}  # stores the legal moves.
+        # check if already calculated on last move
+        if self.next_legal_moves[0] == Board.get_pos_hash(self.pieces)-color:
+            return self.next_legal_moves[1]
 
+        moves = {self.PASS}  # stores the legal moves.
         # Get all empty locations.
         for y in range(self.n):
             for x in range(self.n):
                 if self.is_legal_move(color, (x, y)):
                     moves.add((x, y))
+        if len(moves) == 1:
+            self.game_ended = True
         return list(moves)
 
     def get_game_ended(self):
@@ -66,16 +73,6 @@ class Board():
         elif black_score < white_score:
             return -1
         return 0.5
-
-    def has_legal_moves(self):
-        """Returns True if has legal move else False
-        """
-        # Get all empty locations.
-        for y in range(self.n):
-            for x in range(self.n):
-                if self.is_legal_move(1, (x, y)) or self.is_legal_move(-1, (x, y)):
-                    return True
-        return False
 
     @staticmethod
     def mark_enclosed_recurse(board, true_color, false_color, x, y, vc, enclosed_color=0):
@@ -199,7 +196,8 @@ class Board():
         self.captured_stones[color] += captured[color]
         self.captured_stones[-color] += captured[-color]
         self.move_number += 1
-        # if self.move_number == self.board_history.shape[0]:
-        #     self.board_history = np.append(self.board_history, np.zeros((self.move_number, self.n, self.n)), axis=0)
-        # self.board_history[self.move_number] = deepcopy(self.pieces)
-        self.board_history_hash[Board.get_pos_hash(self.pieces)] = True
+        board_hash = Board.get_pos_hash(self.pieces)
+        self.board_history_hash[board_hash] = True
+        # pre-caluculate the next player's legal moves,
+        # and see if the game is over in case they have non.
+        self.next_legal_moves = (board_hash-color, self.get_legal_moves(-color))

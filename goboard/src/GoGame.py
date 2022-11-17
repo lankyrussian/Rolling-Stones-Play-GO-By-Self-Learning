@@ -59,6 +59,8 @@ class GoGame(Game):
 
     def getCanonicalForm(self, board, player):
         # return state if player==1, else return -state if player==-1
+        if player==0:
+            return board
         new_board = Board(self.n)
         new_board.pieces = board.pieces * player
         new_board.move_number = board.move_number

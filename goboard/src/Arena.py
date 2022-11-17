@@ -54,9 +54,9 @@ class Arena():
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
 
             if valids[action] == 0:
-                log.error(f'Action {action} is not valid!')
+                log.error(f'Action {action} is not valid! Ending the game prematurely.')
                 log.debug(f'valids = {valids}')
-                assert valids[action] > 0
+                break
             board, curPlayer = self.game.getNextState(board, curPlayer, action)
         if verbose:
             assert self.display

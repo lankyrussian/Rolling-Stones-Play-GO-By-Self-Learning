@@ -157,3 +157,26 @@ class TestGoLogic(unittest.TestCase):
         b.execute_move((0, 2), 1)
         b.execute_move((0, 0), -1)
         self.assertNotIn((0, 1), b.get_legal_moves(-1))
+
+    def test_game_over(self):
+        b = Board(5)
+        for i in range(4):
+            for j in range(5):
+                b.execute_move((i, j), 1)
+        for j in range(4):
+            b.execute_move((4, j), 1)
+
+        self.assertTrue(b.get_game_ended())
+
+    def test_no_suicide(self):
+        b = Board(5)
+        b.pieces = np.array([
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 0],
+        ])
+        valid_moves = b.get_legal_moves(-1)
+        self.assertNotIn((4, 4), valid_moves)
+
