@@ -26,6 +26,15 @@ unit of space between all robots for simpler pathfinding.
 Features:
 * A* pathfinding for putting new stones on the board, and removing stones from the board
 
+## mujocoboard
+
+virtual board to simulate sphero movement on path commands
+
+### setup
+
+Install Mujoco. 
+If using conda, make a soft link from the local /usr/lib/x86_64-linux-gnu/libstdc++.so.6 to 
+the corresponding file in your conda env.
 
 ### Using Repositories
 
