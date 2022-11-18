@@ -19,21 +19,21 @@ class MQTTGoGame(GoGame):
         self.client.publish(topic, msg)
         self.client.disconnect()
 
-    def sendBoardToROS(self, board_diff):
+    def sendBoardToMQTT(self, board_diff, board):
         # send stone positions, move/remove, color to pathfinding algorithm
         for pos, val in np.ndenumerate(board_diff):
             if val != 0:
                 idx = pos[0] * self.n + pos[1]
-                if self.b.pieces[pos] == 0:
+                if board.pieces[pos] == 0:
                     msg = struct.pack('H', idx)
                     self.send("board/remove", msg)
                 else:
-                    color = 1 if self.b.pieces[pos] == 1 else 0
+                    color = 1 if board.pieces[pos] == 1 else -1
                     msg = struct.pack('H?', idx, color)
                     self.send("board/move", msg)
 
     def getNextState(self, board, player, action):
         new_board, player = super().getNextState(board, player, action)
-        board_diff = new_board - board
-        self.sendBoardToROS(board_diff)
-        return (self.b.pieces, player)
+        board_diff = new_board.pieces - board.pieces
+        self.sendBoardToMQTT(board_diff, board)
+        return (new_board, player)

@@ -3,9 +3,10 @@ import numpy as np
 
 from Arena import Arena
 from MCTS import MCTS
-from kerasclasses.NNet import NNetWrapper as NNet
+from NNet import NNetWrapper as nn
 from GoPlayers import RandomPlayer, HumanGoPlayer, GreedyGobangPlayer
 from GoGame import GoGame
+from utils import dotdict
 
 def main():
     parser = argparse.ArgumentParser()
@@ -14,8 +15,8 @@ def main():
     parser.add_argument('--board_size', type=int, default=5)
     parser.add_argument('--num_games',  type=int, default=2)
     parser.add_argument('--com_type', type=str, default="mqtt")
-    parser.add_argument('--player1',    type=str, default='human')
-    parser.add_argument('--player2',    type=str, default='random')
+    parser.add_argument('--player1',    type=str, default='a')
+    parser.add_argument('--player2',    type=str, default='a')
     parser.add_argument('--mqtt_broker', type=str, default='localhost')
     parser.add_argument('--mqtt_port', type=int, default=1883)
 
@@ -47,19 +48,19 @@ def main():
     # player1
     if player1[0] == 'a':
         # nnet players
-        n1 = NNet(g)
+        n1 = nn(g)
         # todo provide a model file
-        # n1.load_checkpoint('./pretrained_models/othello/pytorch/', '6x100x25_best.pth.tar')
-        args1 = {'numMCTSSims': 50, 'cpuct': 1.0}
+        n1.load_checkpoint('./pretrained/', 'best.pth.tar')
+        args1 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
         mcts1 = MCTS(g, n1, args1)
         player1 = lambda x: np.argmax(mcts1.getActionProb(x, temp=0))
     else:
         player1 = players[player1[0]]
 
     if player2[0] == 'a':
-        n2 = NNet(g)
-        # n2.load_checkpoint('./pretrained_models/othello/pytorch/', '8x8_100checkpoints_best.pth.tar')
-        args2 = {'numMCTSSims': 50, 'cpuct': 1.0}
+        n2 = nn(g)
+        n2.load_checkpoint('/home/vlad/PycharmProjects/Rolling-Stones-Play-GO-By-Self-Learning/goboard/src/pretrained', 'best.pth.tar')
+        args2 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
         mcts2 = MCTS(g, n2, args2)
         n2p = lambda x: np.argmax(mcts2.getActionProb(x, temp=0))
         player2 = n2p  # Player 2 is neural network if it's cpu vs cpu.
