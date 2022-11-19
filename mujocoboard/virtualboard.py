@@ -15,16 +15,18 @@ import paho.mqtt.client as mqtt
 
 client = mqtt.Client()
 # n time steps to apply force, x-force, y-force, z-force, x-torque, y-torque, z-torque
-command = [1, 2, 0, 0, 0,0,0]
+robot_to_cmd = {}
 def handleMove(cli, _, tm):
-    global command
+    global robot_to_cmd
     message = tm.payload.decode("utf-8")
     topic = tm.topic
-    command = [int(x) for x in message.split(',')]
-    print(command)
+    cmd, robot_id = topic.split("/")
+    if cmd == "robotmove":
+        robot_to_cmd[robot_id] = [int(x) for x in message.split(',')]
+    print(robot_to_cmd)
 client.on_message = handleMove
 client.connect("localhost", 1883)
-client.subscribe("/move")
+client.subscribe("robotmove/#")
 client.loop_start()
 
 MODEL_XML = "env.xml"
@@ -34,14 +36,20 @@ sim = MjSim(model)
 viewer = MjViewer(sim)
 t = 0
 
-body_id = model.body_name2id("robot")
+robot_to_id = {}
+for n in range(1, 9):
+    robot_to_id[f's{n}'] = model.body_name2id(f"s{n}")
+    robot_to_cmd[f's{n}'] = [0, 0, 0, 0, 0, 0, 0]
+
 while True:
     t += 1
-    if command[0] > 0:
-        sim.data.xfrc_applied[body_id] = np.array([command[1], command[2], command[3], command[4], command[5], command[6]])
-        command[0] -= 1
-    else:
-        sim.data.xfrc_applied[body_id] = np.zeros_like(sim.data.xfrc_applied[body_id])
+    for robot, cmd in robot_to_cmd.items():
+        if cmd[0] > 0:
+            cmd[0] -= 1
+            sim.data.xfrc_applied[robot_to_id[robot]] = np.array(cmd[1:])
+        else:
+            sim.data.xfrc_applied[robot_to_id[robot]] = np.zeros_like(sim.data.xfrc_applied[robot_to_id[robot]])
+
     sim.step()
     viewer.render()
     if t > 100 and os.getenv('TESTING') is not None:
