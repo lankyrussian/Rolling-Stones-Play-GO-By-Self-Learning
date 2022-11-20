@@ -25,12 +25,12 @@ class MQTTGoGame(GoGame):
             if val != 0:
                 idx = pos[0] * self.n + pos[1]
                 if board.pieces[pos] == 0:
-                    msg = struct.pack('H', idx)
-                    self.send("board/remove", msg)
+                    msg = struct.pack('ii', idx, 0)
+                    self.send("goboard", msg)
                 else:
                     color = 1 if board.pieces[pos] == 1 else -1
-                    msg = struct.pack('H?', idx, color)
-                    self.send("board/move", msg)
+                    msg = struct.pack('ii', idx, color)
+                    self.send("goboard", msg)
 
     def getNextState(self, board, player, action):
         new_board, player = super().getNextState(board, player, action)

@@ -11,6 +11,7 @@ from copy import deepcopy
 class GoGame(Game):
     def __init__(self, n=5):
         self.n = n
+        self.move_number = 0
 
     def getInitBoard(self):
         # return initial board (numpy board)
@@ -30,10 +31,11 @@ class GoGame(Game):
         newboard = deepcopy(board)
         move = (int(action / self.n), action % self.n)
         if move == board.PASS:
-            if newboard.previous_passed:
+            if newboard.previous_passed or newboard.move_number > 400:
                 newboard.game_ended = True
             else:
                 newboard.previous_passed = True
+            newboard.move_number += 1
             return (newboard, -player)
         newboard.previous_passed = False
         newboard.execute_move(move, player)
