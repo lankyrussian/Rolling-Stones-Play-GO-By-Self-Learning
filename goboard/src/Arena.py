@@ -51,11 +51,12 @@ class Arena():
                 self.display(board)
             action = players[curPlayer + 1](self.game.getCanonicalForm(board, curPlayer))
 
-            valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
+            valids = self.game.getValidMoves(board, curPlayer)
 
             if valids[action] == 0:
                 log.error(f'Action {action} is not valid! Ending the game prematurely.')
                 log.debug(f'valids = {valids}')
+                board.game_ended = True
                 break
             board, curPlayer = self.game.getNextState(board, curPlayer, action)
         if verbose:

@@ -6,6 +6,10 @@ import unittest
 import src
 # sys.path.append('goboard')
 from src.GoLogic import Board
+
+from GoGame import GoGame
+
+
 # from GoLogic import Board
 
 
@@ -45,7 +49,7 @@ class TestGoLogic(unittest.TestCase):
         self.assertEqual(Board.count_liberties(board, (2, 0)), 7)
         self.assertEqual(Board.count_liberties(board, (2, 2)), 7)
 
-    def test_repetition(self):
+    def test_repetition_black(self):
         board = Board(5)
         board.execute_move((0, 1), 1)
         board.execute_move((1, 0), 1)
@@ -59,6 +63,25 @@ class TestGoLogic(unittest.TestCase):
         valid_moves = board.get_legal_moves(1)
         self.assertNotIn((1, 2), valid_moves)
         self.assertIn((3, 3), valid_moves)
+
+    def test_repetition_white(self):
+        game = GoGame(5)
+        board = game.getInitBoard()
+        board.execute_move((0, 1), -1)
+        board.execute_move((1, 0), -1)
+        board.execute_move((1, 2), -1)
+        board.execute_move((2, 1), -1)
+        board.execute_move((0, 2), 1)
+        board.execute_move((2, 2), 1)
+        board.execute_move((1, 3), 1)
+        board.execute_move((1, 1), 1)  # capture
+        # board.execute_move((1, 2), 1) # would be a ko
+        valid_moves = board.get_legal_moves(-1)
+        self.assertNotIn((1, 2), valid_moves)
+        self.assertIn((3, 3), valid_moves)
+        valid_moves = game.getValidMoves(board, -1)
+        self.assertEqual(valid_moves[6], 0)
+        self.assertEqual(valid_moves[15], 1)
 
     def test_capture(self):
         board = Board(5)
@@ -166,17 +189,5 @@ class TestGoLogic(unittest.TestCase):
         for j in range(4):
             b.execute_move((4, j), 1)
 
-        self.assertTrue(b.get_game_ended())
-
-    def test_no_suicide(self):
-        b = Board(5)
-        b.pieces = np.array([
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 0],
-        ])
-        valid_moves = b.get_legal_moves(-1)
-        self.assertNotIn((4, 4), valid_moves)
+        self.assertTrue(b.get_game_ended(1))
 

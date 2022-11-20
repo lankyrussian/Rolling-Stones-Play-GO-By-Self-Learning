@@ -28,7 +28,7 @@ args = dotdict({
 
     'checkpoint': './temp/',
     'load_model': True,
-    'load_folder_file': ('./temp','checkpoint_12.pth.tar'),
+    'load_folder_file': ('./temp','checkpoint_3.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
 
 })

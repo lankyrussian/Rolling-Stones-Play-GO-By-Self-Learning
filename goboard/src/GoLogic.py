@@ -46,11 +46,11 @@ class Board():
 
     def get_legal_moves(self, color):
         """Returns all the legal moves for the given color.
-        (1 for white, -1 for black
+        (1 for black, -1 for white
         """
-        # check if already calculated on last move
-        if self.next_legal_moves[0] == Board.get_pos_hash(self.pieces)-color:
-            return self.next_legal_moves[1]
+        # # check if already calculated on last move
+        # if self.next_legal_moves[0] == Board.get_pos_hash(self.pieces)+color:
+        #     return self.next_legal_moves[1]
 
         moves = {self.PASS}  # stores the legal moves.
         # Get all empty locations.
@@ -62,15 +62,15 @@ class Board():
             self.game_ended = True
         return list(moves)
 
-    def get_game_ended(self):
+    def get_game_ended(self, player):
         if not self.game_ended:
             return 0
         # game ended
-        black_score = self.calculate_score(-1)
-        white_score = self.calculate_score(1)
-        if black_score > white_score:
+        player_score = self.calculate_score(player)
+        opponent_score = self.calculate_score(-player)
+        if player_score > opponent_score:
             return 1
-        elif black_score < white_score:
+        elif player_score < opponent_score:
             return -1
         return 0.5
 
@@ -199,5 +199,10 @@ class Board():
         board_hash = Board.get_pos_hash(self.pieces)
         self.board_history_hash[board_hash] = True
         # pre-caluculate the next player's legal moves,
-        # and see if the game is over in case they have non.
+        # and see if the game is over in case they have none.
         self.next_legal_moves = (board_hash-color, self.get_legal_moves(-color))
+        # to make training simpler, we add one more rule:
+        # if the board is filled with stones of one color,
+        # and one eye is left, the game is over.
+        if np.abs(np.sum(self.pieces))==self.pieces.size-1:
+            self.game_ended = True

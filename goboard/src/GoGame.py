@@ -55,7 +55,7 @@ class GoGame(Game):
     def getGameEnded(self, board, player):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
-        return board.get_game_ended()
+        return board.get_game_ended(player)
 
     def getCanonicalForm(self, board, player):
         # return state if player==1, else return -state if player==-1
@@ -102,7 +102,9 @@ class GoGame(Game):
 
         for y in range(n):
             print(y, "|", end="")
-        print(f"")
+        black_score = board_.calculate_score(1)
+        white_score = board_.calculate_score(-1)
+        print(f"b: {black_score}, w: {white_score}")
         print(" -----------------------")
         for y in range(n):
             print(y, "|", end="")    # print the row #

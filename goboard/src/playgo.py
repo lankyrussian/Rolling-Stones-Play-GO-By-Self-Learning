@@ -13,7 +13,7 @@ def main():
     parser.add_argument('--name',       type=str, default='goboard')
     parser.add_argument('--log',        type=str, default='log.txt')
     parser.add_argument('--board_size', type=int, default=5)
-    parser.add_argument('--num_games',  type=int, default=2)
+    parser.add_argument('--num_games',  type=int, default=10)
     parser.add_argument('--com_type', type=str, default="mqtt")
     parser.add_argument('--player1',    type=str, default='a')
     parser.add_argument('--player2',    type=str, default='a')
@@ -33,11 +33,9 @@ def main():
         from ROSGoGame import ROSGoGame
         g = ROSGoGame(board_size)
     else:
-        raise ValueError("Invalid communication type, should be wither mqtt or ros")
-    # g = GobangGame(board_size)
+        raise ValueError("Invalid communication type, should be either mqtt or ros")
 
     # all players
-
     players = {
         "r": RandomPlayer(g).play,
         "g": GreedyGobangPlayer(g).play,
@@ -49,8 +47,7 @@ def main():
     if player1[0] == 'a':
         # nnet players
         n1 = nn(g)
-        # todo provide a model file
-        n1.load_checkpoint('./pretrained/', 'best.pth.tar')
+        n1.load_checkpoint('./pretrained/', 'checkpoint_3.pth.tar')
         args1 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
         mcts1 = MCTS(g, n1, args1)
         player1 = lambda x: np.argmax(mcts1.getActionProb(x, temp=0))
@@ -59,7 +56,7 @@ def main():
 
     if player2[0] == 'a':
         n2 = nn(g)
-        n2.load_checkpoint('/home/vlad/PycharmProjects/Rolling-Stones-Play-GO-By-Self-Learning/goboard/src/pretrained', 'best.pth.tar')
+        n2.load_checkpoint('/home/vlad/PycharmProjects/Rolling-Stones-Play-GO-By-Self-Learning/goboard/src/pretrained', 'checkpoint_3.pth.tar')
         args2 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
         mcts2 = MCTS(g, n2, args2)
         n2p = lambda x: np.argmax(mcts2.getActionProb(x, temp=0))
