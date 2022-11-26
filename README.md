@@ -36,6 +36,9 @@ Install Mujoco.
 If using conda, make a soft link from the local /usr/lib/x86_64-linux-gnu/libstdc++.so.6 to 
 the corresponding file in your conda env.
 
+make sure the LD_PRELOAD env variable is setup to render mujoco:     
+`export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so`
+
 ### Using Repositories
 
 [alpha-zero-general](https://github.com/suragnair/alpha-zero-general)   
