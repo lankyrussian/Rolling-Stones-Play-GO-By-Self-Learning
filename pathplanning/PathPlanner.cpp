@@ -11,6 +11,7 @@ PathFinder::PathFinder()
 		std::cout << "Failed to create an mqtt instance";
 		return;
 	}
+	InitializeAndExpand();
 	InitializeMqtt();
 }
 
@@ -86,39 +87,11 @@ void PathFinder::InitializeAndExpand()
 {
 	//initialize or subscribe to map 
 
-	astarObj.setWorldSize({ 9,13 });
+	astarObj.setWorldSize({ 13,13 });
 	astarObj.setDiagonalMovement(false);
 
-
-	for (int i = 0; i < 25; i++)
-		map[i] = 0;
-
-	expandedMap.clear();
-	for (int i = 0; i < 26; i++)
-	{
-		expandedMap.push_back(0);
-	}
-	for (int i = 0; i < 5; i++) //left code in case we want to use external maps again
-	{
-		expandedMap.push_back(0);
-		expandedMap.push_back(0);
-		expandedMap.push_back(map[(5*i)]);
-		expandedMap.push_back(0);
-		expandedMap.push_back(map[(5 * i) +1]);
-		expandedMap.push_back(0);
-		expandedMap.push_back(map[(5 * i) +2]);
-		expandedMap.push_back(0);
-		expandedMap.push_back(map[(5 * i) +3]);
-		expandedMap.push_back(0);
-		expandedMap.push_back(map[(5 * i) +4]);
-		expandedMap.push_back(0);
-		expandedMap.push_back(0);
-	}
-	for (int i = 0; i < 26; i++)
-	{
-		expandedMap.push_back(0);
-	}
-
+	std::vector<int> tempVect((rowSize*columnSize), 0);
+	expandedMap = tempVect;
 }
 
 void PathFinder::PutNewStone(int newIndex, int playerColor)
@@ -127,7 +100,7 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 		return;
 
 	int rowCount = newIndex / 5;
-	int expandedIndex = 28 + (newIndex * 2) + (rowCount * 3);
+	int expandedIndex = 28 + (newIndex * 2) + (rowCount * 16);
 
 	int column = (expandedIndex % 13);
 	int row = (expandedIndex - column) / 13;
@@ -172,7 +145,7 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 void PathFinder::RemoveStone(int index)
 {
 	int rowCount = index / 5;
-	int expandedIndex = 28 + (index * 2) + (rowCount * 3);
+	int expandedIndex = 28 + (index * 2) + (rowCount * 16);
 
 	int deadRow, deadColumn;
 
