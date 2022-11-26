@@ -18,11 +18,15 @@ int main()
 			std::cout << std::endl;
 	}
 
+
 	PathFinder pathObj;
 	pathObj.initializeAndExpand(map);
 
 	pathObj.putNewStone(13, 22);
 	pathObj.removeStone(8);
+
+
+
 
 	return 0;
 }

@@ -26,6 +26,11 @@ unit of space between all robots for simpler pathfinding.
 Features:
 * A* pathfinding for putting new stones on the board, and removing stones from the board
 
+### setup
+install mosquitto:    
+`sudo apt-get install libmosquitto-dev mosquitto-dev`    
+`cd pathplanning ; make`
+
 ## mujocoboard
 
 virtual board to simulate sphero movement on path commands

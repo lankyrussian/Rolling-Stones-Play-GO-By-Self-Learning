@@ -1,13 +1,88 @@
 #include "PathPlanner.h"
 #include <iostream>
 
+
 PathFinder::PathFinder()
-{}
+{
+	mosquitto_lib_init();
+	_mqtt = mosquitto_new(NULL, true, this);
+	if (_mqtt == NULL)
+	{
+		std::cout << "Failed to create an mqtt instance";
+		return;
+	}
+	InitializeMqtt();
+}
 
 PathFinder::~PathFinder()
 {}
 
-void PathFinder::initializeAndExpand(int newMap[25])
+
+void PathFinder::InitializeMqtt()
+{
+	mosquitto_connect_callback_set(_mqtt, OnConnect);
+	mosquitto_message_callback_set(_mqtt, OnMessage);
+	mosquitto_publish_callback_set(_mqtt, OnPublish);
+	MqttLoop();
+}
+
+void PathFinder::MqttLoop()
+{
+	int rc = mosquitto_connect(_mqtt, "0.0.0.0", 1883, 10);
+	if(rc) {
+		std::cout << "Error establishing connection: " << mosquitto_strerror(rc) << std::endl;
+		return;
+	}
+	mosquitto_loop_start(_mqtt);
+	printf("Press Enter to quit...\n");
+	getchar();
+	mosquitto_loop_stop(_mqtt, true);
+
+	mosquitto_disconnect(_mqtt);
+	mosquitto_destroy(_mqtt);
+	mosquitto_lib_cleanup();
+}
+
+void PathFinder::OnConnect(struct mosquitto *msqt, void *obj, int reason)
+{
+	PathFinder* pfPtr = static_cast<PathFinder *>(obj);
+	std::cout << "Connected to broker. Reason:" << mosquitto_reason_string(reason) << std::endl;
+	mosquitto_subscribe(pfPtr->_mqtt, NULL, "/gomove", 2);
+	std::cout << "Subscribed to /gomove" << std::endl;
+}
+
+void PathFinder::OnMessage(struct mosquitto * msqt, void * obj, const struct mosquitto_message * msg)
+{
+	PathFinder* pfPtr = static_cast<PathFinder *>(obj);
+	std::cout << "Message received on topic:" << msg->topic << std::endl;
+
+	if (msg->payloadlen != 8)
+	{
+		std::cout << "Message length is invalid, expected 8bytes(2 ints), recieved " << msg->payloadlen << "bytes.";
+		return;
+	}
+	else
+	{
+		int* msgArr = static_cast<int*>(msg->payload);
+		if (msgArr[1] != 0)
+		{
+			pfPtr->PutNewStone(msgArr[0], msgArr[1]);
+		}
+		else
+		{
+			pfPtr->RemoveStone(msgArr[0]);
+
+		}
+	}
+}
+
+void PathFinder::OnPublish(struct mosquitto *msqt, void *obj, int mid)
+{
+	std::cout << "Message was published: " << mid << std::endl;
+}
+
+
+void PathFinder::InitializeAndExpand()
 {
 	//initialize or subscribe to map 
 
@@ -16,48 +91,37 @@ void PathFinder::initializeAndExpand(int newMap[25])
 
 
 	for (int i = 0; i < 25; i++)
-		map[i] = newMap[i];
+		map[i] = 0;
 
 	expandedMap.clear();
 	for (int i = 0; i < 26; i++)
 	{
-		expandedMap.push_back(-1);
+		expandedMap.push_back(0);
 	}
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 5; i++) //left code in case we want to use external maps again
 	{
-		expandedMap.push_back(-1);
-		expandedMap.push_back(-1);
+		expandedMap.push_back(0);
+		expandedMap.push_back(0);
 		expandedMap.push_back(map[(5*i)]);
-		expandedMap.push_back(-1);
+		expandedMap.push_back(0);
 		expandedMap.push_back(map[(5 * i) +1]);
-		expandedMap.push_back(-1);
+		expandedMap.push_back(0);
 		expandedMap.push_back(map[(5 * i) +2]);
-		expandedMap.push_back(-1);
+		expandedMap.push_back(0);
 		expandedMap.push_back(map[(5 * i) +3]);
-		expandedMap.push_back(-1);
+		expandedMap.push_back(0);
 		expandedMap.push_back(map[(5 * i) +4]);
-		expandedMap.push_back(-1);
-		expandedMap.push_back(-1);
+		expandedMap.push_back(0);
+		expandedMap.push_back(0);
 	}
 	for (int i = 0; i < 26; i++)
 	{
-		expandedMap.push_back(-1);
-	}
-
-	for (int i = 0; i < expandedMap.size(); i++)
-	{
-		int num = expandedMap.at(i);
-		if (num != -1)
-		{
-			int column = (i % 13);
-			int row = (i - column) / 13;
-			astarObj.addCollision({ row, column - 1 });
-		}
+		expandedMap.push_back(0);
 	}
 
 }
 
-void PathFinder::putNewStone(int newIndex, int playerColor)
+void PathFinder::PutNewStone(int newIndex, int playerColor)
 {
 	if (newIndex > 24)
 		return;
@@ -86,22 +150,26 @@ void PathFinder::putNewStone(int newIndex, int playerColor)
 			std::cout << std::endl;
 	}
 
-	//publish new path somewhere here
+	int rc = mosquitto_publish(_mqtt, NULL, "gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
+	if(rc != MOSQ_ERR_SUCCESS){
+		std::cout << "Error publishing: " << mosquitto_strerror(rc) << std::endl;
+	}
 
 	//after completion
 	astarObj.addCollision({ row, column });
 
-	for (int i = 0; i < expandedMap.size(); i++)
+	//print for debuggin
+	/*for (int i = 0; i < expandedMap.size(); i++)
 	{
 		std::cout << expandedMap.at(i) << ' ';
 		if ((i + 1) % 13 == 0)
 			std::cout << std::endl;
-	}
+	}*/
 
 
 }
 
-void PathFinder::removeStone(int index)
+void PathFinder::RemoveStone(int index)
 {
 	int rowCount = index / 5;
 	int expandedIndex = 28 + (index * 2) + (rowCount * 3);
@@ -115,15 +183,13 @@ void PathFinder::removeStone(int index)
 
 	for (int i = 2; i < expandedMap.size(); i++)
 	{
-		if (expandedMap.at(i) == -1)
+		if (expandedMap.at(i) == 0)
 		{
 			deadColumn = (i % 13);
 			deadRow = (i - deadColumn) / 13;
 			astarObj.removeCollision({ row, column }); //need to tell astar there's no collision where it's located
 
 			path = astarObj.findPath( {deadRow, deadColumn}, { row, column });
-			//these need to be done AFTER the motion is completed
-			astarObj.addCollision({ deadRow, deadColumn });
 
 			//break
 			i = (int)expandedMap.size();
@@ -156,7 +222,12 @@ void PathFinder::removeStone(int index)
 	}
 
 
-	// publish path to controller
+	// publish
+	int rc = mosquitto_publish(_mqtt, NULL, "/gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
+	if(rc != MOSQ_ERR_SUCCESS){
+		std::cout << "Error publishing: " << mosquitto_strerror(rc) << std::endl;
+	}
 
+	astarObj.addCollision({ deadRow, deadColumn });
 
 }

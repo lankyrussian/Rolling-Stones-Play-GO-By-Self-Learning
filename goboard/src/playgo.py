@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 
-from Arena import Arena
+from Arena import ArenaMQTT
 from MCTS import MCTS
 from NNet import NNetWrapper as nn
 from GoPlayers import RandomPlayer, HumanGoPlayer, GreedyGobangPlayer
@@ -15,10 +15,11 @@ def main():
     parser.add_argument('--board_size', type=int, default=5)
     parser.add_argument('--num_games',  type=int, default=2)
     parser.add_argument('--com_type', type=str, default="mqtt")
-    parser.add_argument('--player1',    type=str, default='a')
+    parser.add_argument('--player1',    type=str, default='h')
     parser.add_argument('--player2',    type=str, default='a')
     parser.add_argument('--mqtt_broker', type=str, default='localhost')
     parser.add_argument('--mqtt_port', type=int, default=1883)
+    parser.add_argument('--use_mqtt', type=bool, default=True)
 
     args = parser.parse_args()
     board_size = args.board_size
@@ -27,8 +28,7 @@ def main():
     player2 = args.player2
 
     if args.com_type == "mqtt":
-        from MQTTGoGame import MQTTGoGame
-        g = MQTTGoGame(board_size, args.mqtt_broker, args.mqtt_port)
+        g = GoGame(board_size)
     elif args.com_type == "ros":
         from ROSGoGame import ROSGoGame
         g = ROSGoGame(board_size)
@@ -64,7 +64,13 @@ def main():
     else:
         player2 = players[player2[0]]
 
-    arena = Arena(player1, player2, g, display=GoGame.display)
+    arena = ArenaMQTT(
+        player1, player2, g,
+        display=GoGame.display,
+        use_mqtt=args.use_mqtt,
+        broker=args.mqtt_broker,
+        port=args.mqtt_port
+    )
 
     print(arena.playGames(num_games, verbose=True))
 

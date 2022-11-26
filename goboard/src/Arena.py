@@ -1,18 +1,22 @@
 "from sphero_formation commit 0ac14aad3"
 
 import logging
+import struct
+
+import numpy as np
+import paho.mqtt.client as mqtt
 
 from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
 
-class Arena():
+class ArenaMQTT():
     """
     An Arena class where any 2 agents can be pit against each other.
     """
 
-    def __init__(self, player1, player2, game, display=None):
+    def __init__(self, player1, player2, game, display=None, use_mqtt=False, broker='localhost', port=1883):
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -28,6 +32,30 @@ class Arena():
         self.player2 = player2
         self.game = game
         self.display = display
+        self.broker = broker
+        self.port = port
+        self.use_mqtt = use_mqtt
+        self.client = mqtt.Client() if use_mqtt else None
+
+    def send(self, topic, msg):
+        self.client.connect(self.broker, self.port)
+        self.client.publish(topic, msg)
+        self.client.disconnect()
+
+    def sendBoardToMQTT(self, board_diff, board_pieces):
+        # send stone positions, move/remove, color to pathfinding algorithm
+        n = board_diff.shape[0]
+        for pos, val in np.ndenumerate(board_diff):
+            if val != 0:
+                idx = pos[0] * n + pos[1]
+                print(f'sending {idx}')
+                if board_pieces[pos] == 0:
+                    msg = struct.pack('ii', idx, 0)
+                    self.send("/gomove", msg)
+                else:
+                    color = 1 if board_pieces[pos] == 1 else -1
+                    msg = struct.pack('ii', idx, color)
+                    self.send("/gomove", msg)
 
     def playGame(self, verbose=False):
         """
@@ -58,7 +86,12 @@ class Arena():
                 log.debug(f'valids = {valids}')
                 board.game_ended = True
                 break
-            board, curPlayer = self.game.getNextState(board, curPlayer, action)
+            new_board, curPlayer = self.game.getNextState(board, curPlayer, action)
+            # send board difference to mqtt
+            if self.use_mqtt:
+                board_diff = new_board.pieces - board.pieces
+                self.sendBoardToMQTT(board_diff, board)
+            board = new_board
         if verbose:
             assert self.display
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
