@@ -38,7 +38,7 @@ virtual board to simulate sphero movement on path commands
 
 ### setup
 
-Install Mujoco. 
+[Install Mujoco](https://blog.guptanitish.com/blog/install-mujoco/). 
 If using conda, make a soft link from the local /usr/lib/x86_64-linux-gnu/libstdc++.so.6 to 
 the corresponding file in your conda env.
 
