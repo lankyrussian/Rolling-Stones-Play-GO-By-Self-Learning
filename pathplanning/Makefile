@@ -1,2 +1,2 @@
 all: Main.cpp PathPlanner.cpp AStar.cpp
-	$(CXX) -o PathPlanner Main.cpp PathPlanner.cpp AStar.cpp -I. -lmosquitto
+	$(CXX) -g -o PathPlanner Main.cpp PathPlanner.cpp AStar.cpp -I. -lmosquitto -DCMAKE_BUILD_TYPE=Debug

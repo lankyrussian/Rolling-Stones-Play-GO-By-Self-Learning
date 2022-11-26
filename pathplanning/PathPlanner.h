@@ -21,6 +21,8 @@ public:
 	void MqttLoop();
 
 private:
+	const int rowSize = 13;
+	const int columnSize = 13;
 	int map[25];
 	std::vector<int> expandedMap;
 	AStar::Generator astarObj;

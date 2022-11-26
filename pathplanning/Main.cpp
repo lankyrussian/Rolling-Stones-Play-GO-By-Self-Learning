@@ -10,6 +10,5 @@ int main()
 
 	PathFinder *pathObj = new PathFinder();
 
-
 	return 0;
 }
