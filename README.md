@@ -9,6 +9,7 @@ current features:
 
 ### Setup
 
+[install conda for linux](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)   
 `conda create --name rlpg --file env.txt`
 
 ### Play against a random agent
