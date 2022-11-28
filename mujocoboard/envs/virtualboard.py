@@ -7,21 +7,23 @@ On the floor, there's a cylinder with X and Y slide joints, so it can
 be pushed around with the robot. There's also a box without joints. Since
 the box doesn't have joints, it's fixed and can't be pushed around.
 """
+import math
+
 import gym
 from mujoco_py import load_model_from_xml, MjSim, MjViewer, MjRenderContextOffscreen
 import os
 import numpy as np
 
-MODEL_XML = """
-<?xml version="1.0" ?>
+MODEL_XML = """<?xml version="1.0" ?>
 <mujoco>
     <option timestep="0.005" />
     <worldbody>
         <camera euler="0 0 0" fovy="40" name="rgb" pos="0 0 2.5"></camera>
-        SPHEROS
-        <body name="floor" pos="FLOOR 0.025">
-            <geom condim="3" size="10.0 10.0 0.02" rgba="0 1 0 1" type="box"/>
+        SPHEROS_
+        <body name="floor" pos="FLOOR_ 0.025">
+            <geom condim="3" size="FLOORSIZE_ 0.02" rgba="0.8 0.8 0.8 1" type="box"/>
         </body>
+        LINES_
     </worldbody>
 </mujoco>
 """
@@ -66,19 +68,36 @@ class SpherosEnv(gym.Env):
         return data
 
     @staticmethod
-    def build_env(sphero_poss, field_size):
+    def build_env(sphero_poss, field_size, colors=None):
         env_str = MODEL_XML
         spheros_str = ""
+        if colors:
+            assert len(colors) == len(sphero_poss)
         for si, pos in enumerate(sphero_poss):
-            sphero_str = f""""
-                <body name="s{si}" pos="{pos[0]} {pos[1]} 1.2">
-                    <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
-                    <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 0 0 1" size="0.15" type="sphere"/>
-                </body>"""
+            rgba = " ".join([str(i) for i in colors[si]]) if colors else "0.5 0.5 0.5 0.75"
+            sphero_str = f"""
+        <body name="s{si}" pos="{pos[0]} {pos[1]} 0.4">
+            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
+            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="{rgba}" size="0.15" type="sphere"/>
+        </body>"""
             spheros_str += sphero_str
-        env_str = env_str.replace("SPHEROS", spheros_str)
-        floor_coords_str = f"{-field_size[0]/2} -{field_size[1]/2}"
-        env_str = env_str.replace("FLOOR", floor_coords_str)
+        env_str = env_str.replace("SPHEROS_", spheros_str)
+        floor_coords_str = "0 0"  # f"{-field_size[0]/2} {-field_size[1]/2}"
+        env_str = env_str.replace("FLOOR_", floor_coords_str)
+        env_str = env_str.replace("FLOORSIZE_", f"{field_size[0]} {field_size[1]}")
+        # add board vertical and horizontal lines
+        lines_str = ""
+        n_rows = int(math.sqrt(len(sphero_poss)))
+        for i in range(0, n_rows):
+            line_str_ = f"""<body name="line{i}h" pos="0 {i*2*0.33 + 3*0.33 -field_size[0]/2} 0.025">
+            <geom condim="3" size="{field_size[1]} 0.02 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+        </body>
+        <body name="line{i}v" pos="{i*2*0.33 + 3*0.33 -field_size[0]/2} 0 0.025">
+            <geom condim="3" size="0.03 {field_size[1]} 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+        </body>"""
+            lines_str += line_str_
+
+        env_str = env_str.replace("LINES_", lines_str)
         return env_str
 
     def reset(self):

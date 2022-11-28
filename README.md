@@ -45,6 +45,13 @@ the corresponding file in your conda env.
 make sure the LD_PRELOAD env variable is setup to render mujoco:     
 `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so`
 
+### run
+make a go virtual board environment xml with a random stone placement:    
+`python make_env.py`   
+
+run the mujoco simulation using board.xml:    
+`python virtualboard.py`
+
 ### Using Repositories
 
 [alpha-zero-general](https://github.com/suragnair/alpha-zero-general)   

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Example of how bodies interact with each other. For a body to be able to
 move it needs to have joints. In this example, the "robot" is a red ball
@@ -22,7 +21,7 @@ def handleMove(cli, _, tm):
     cmd = topic.split("/")
     if cmd[0] == "robotmove":
         message = tm.payload.decode("utf-8")
-        robot_to_cmd[cmd[1]] = [int(x)  for x in message.split(',')]
+        robot_to_cmd[cmd[-1]] = [int(x)  for x in message.split(',')]
     elif cmd[0] == "gopath":
         message = []
         for i in range(len(tm.payload)//4):
@@ -32,11 +31,11 @@ def handleMove(cli, _, tm):
     print(robot_to_cmd)
 client.on_message = handleMove
 client.connect("localhost", 1883)
-client.subscribe("robotmove")
-client.subscribe("gopath")
+client.subscribe("/robotmove/#")
+client.subscribe("/gopath")
 client.loop_start()
 
-MODEL_XML = "/home/ahmed/FinalProject/SourceCode/Rolling-Stones-Play-GO-By-Self-Learning/mujocoboard/env.xml"
+MODEL_XML = "board.xml"
 
 model = load_model_from_path(MODEL_XML)
 sim = MjSim(model)
