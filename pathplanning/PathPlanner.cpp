@@ -124,7 +124,7 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 			std::cout << std::endl;
 	}
 
-	int rc = mosquitto_publish(_mqtt, NULL, "gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
+	int rc = mosquitto_publish(_mqtt, NULL, "/gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
 	if(rc != MOSQ_ERR_SUCCESS){
 		std::cout << "Error publishing: " << mosquitto_strerror(rc) << std::endl;
 	}
