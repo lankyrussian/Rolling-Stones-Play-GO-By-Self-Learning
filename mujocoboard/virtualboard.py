@@ -18,18 +18,25 @@ client = mqtt.Client()
 robot_to_cmd = {}
 def handleMove(cli, _, tm):
     global robot_to_cmd
-    message = tm.payload.decode("utf-8")
     topic = tm.topic
-    cmd, robot_id = topic.split("/")
-    if cmd == "robotmove":
-        robot_to_cmd[robot_id] = [int(x) for x in message.split(',')]
+    cmd = topic.split("/")
+    if cmd[0] == "robotmove":
+        message = tm.payload.decode("utf-8")
+        robot_to_cmd[cmd[1]] = [int(x)  for x in message.split(',')]
+    elif cmd[0] == "gopath":
+        message = []
+        for i in range(len(tm.payload)//4):
+            tempBytes = tm.payload[(i*4):((i*4)+4)]
+            message.append(int.from_bytes(tempBytes, "little"))
+        print(message)
     print(robot_to_cmd)
 client.on_message = handleMove
 client.connect("localhost", 1883)
-client.subscribe("robotmove/#")
+client.subscribe("robotmove")
+client.subscribe("gopath")
 client.loop_start()
 
-MODEL_XML = "env.xml"
+MODEL_XML = "/home/ahmed/FinalProject/SourceCode/Rolling-Stones-Play-GO-By-Self-Learning/mujocoboard/env.xml"
 
 model = load_model_from_path(MODEL_XML)
 sim = MjSim(model)

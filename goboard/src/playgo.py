@@ -56,7 +56,7 @@ def main():
 
     if player2[0] == 'a':
         n2 = nn(g)
-        n2.load_checkpoint('/home/vlad/PycharmProjects/Rolling-Stones-Play-GO-By-Self-Learning/goboard/src/pretrained', 'best.pth.tar')
+        n2.load_checkpoint('./pretrained', 'best.pth.tar')
         args2 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
         mcts2 = MCTS(g, n2, args2)
         n2p = lambda x: np.argmax(mcts2.getActionProb(x, temp=0))

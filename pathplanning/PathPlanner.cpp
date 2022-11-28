@@ -116,6 +116,7 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 		pathCooridnates.push_back(coordinate.y);
 	}
 
+	std::cout << "Adding Stone: " << std::endl;
 	for (int i = 0; i < pathCooridnates.size(); i++)
 	{
 		std::cout << pathCooridnates.at(i);
@@ -130,15 +131,6 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 
 	//after completion
 	astarObj.addCollision({ row, column });
-
-	//print for debuggin
-	/*for (int i = 0; i < expandedMap.size(); i++)
-	{
-		std::cout << expandedMap.at(i) << ' ';
-		if ((i + 1) % 13 == 0)
-			std::cout << std::endl;
-	}*/
-
 
 }
 
@@ -187,6 +179,7 @@ void PathFinder::RemoveStone(int index)
 		pathCooridnates.push_back(coordinate.y);
 	}
 
+	std::cout << "Removing Stone: " << std::endl;
 	for (int i = 0; i < pathCooridnates.size(); i++)
 	{
 		std::cout << pathCooridnates.at(i);

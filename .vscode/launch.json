@@ -5,15 +5,30 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "C++ Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/pathplanning/PathPlanner",
-            "args": ["arg1", "arg2"],
-            "environment": [{ "name": "config", "value": "Debug" }],
+            "args": [
+                "arg1",
+                "arg2"
+            ],
+            "environment": [
+                {
+                    "name": "config",
+                    "value": "Debug"
+                }
+            ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "makedebug"
         }
-
     ]
 }
