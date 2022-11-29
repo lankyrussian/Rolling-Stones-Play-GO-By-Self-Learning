@@ -7,13 +7,17 @@ import logging
 import os
 import sys
 from collections import deque
+from copy import deepcopy
+from multiprocessing import Pool, Queue, Process
 from pickle import Pickler, Unpickler
 from random import shuffle
 
 import numpy as np
+import torch.cuda
 from tqdm import tqdm
 
-from Arena import Arena
+from Arena import ArenaMQTT
+from GoGame import GoGame
 from MCTS import MCTS
 
 log = logging.getLogger(__name__)
@@ -34,7 +38,8 @@ class Coach():
         self.trainExamplesHistory = []  # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False  # can be overriden in loadTrainExamples()
 
-    def executeEpisode(self):
+    @staticmethod
+    def executeEpisode(q:Queue, mcts:MCTS, game, tempThreshold, curPlayer=1):
         """
         This function executes one episode of self-play, starting with player 1.
         As the game is played, each turn is added as a training example to
@@ -51,30 +56,29 @@ class Coach():
                            the player eventually won the game, else -1.
         """
         trainExamples = []
-        board = self.game.getInitBoard()
-        self.curPlayer = 1
+        board = game.getInitBoard()
         episodeStep = 0
 
         while True:
             episodeStep += 1
-            canonicalBoard = self.game.getCanonicalForm(board, self.curPlayer)
-            temp = int(episodeStep < self.args.tempThreshold)
+            canonicalBoard = game.getCanonicalForm(board, curPlayer)
+            temp = int(episodeStep < tempThreshold)
 
-            pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
-            sym = self.game.getSymmetries(canonicalBoard, pi)
+            pi = mcts.getActionProb(canonicalBoard, temp=temp)
+            sym = game.getSymmetries(canonicalBoard, pi)
             for b, p in sym:
-                trainExamples.append([b, self.curPlayer, p, None])
+                trainExamples.append([b, curPlayer, p, None])
 
             action = np.random.choice(len(pi), p=pi)
             try:
-                board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action)
+                board, curPlayer = game.getNextState(board, curPlayer, action)
             except:
                 log.debug(f"Error in getNextState, ending game early")
-                self.game.game_ended = True
-            r = self.game.getGameEnded(board, self.curPlayer)
+                board.game_ended = True
+            r = game.getGameEnded(board, curPlayer)
 
             if r != 0:
-                return [(x[0], x[2], r * ((-1) ** (x[1] != self.curPlayer))) for x in trainExamples]
+                q.put([(x[0], x[2], r * ((-1) ** (x[1] != curPlayer))) for x in trainExamples])
 
     def learn(self):
         """
@@ -84,18 +88,29 @@ class Coach():
         It then pits the new neural network against the old one and accepts it
         only if it wins >= updateThreshold fraction of games.
         """
-
         for i in range(1, self.args.numIters + 1):
             # bookkeeping
             log.info(f'Starting Iter #{i} ...')
             # examples of the iteration
+            g = GoGame(self.game.n)
+            tempThreshold = deepcopy(self.args.tempThreshold)
+            q = Queue()
+            # self.nnet.nnet = self.nnet.nnet.to('cpu')
+            tasks = [(q, MCTS(g, self.nnet, self.args), g,  tempThreshold) for i in range(self.args.numEps)]
             if not self.skipFirstSelfPlay or i > 1:
                 iterationTrainExamples = deque([], maxlen=self.args.maxlenOfQueue)
-
+                pi = 0
+                for i in range(self.args.processes):
+                    p = Process(target=self.executeEpisode, args=tasks[pi])
+                    p.start()
+                    pi += i
                 for _ in tqdm(range(self.args.numEps), desc="Self Play"):
-                    self.mcts = MCTS(self.game, self.nnet, self.args)  # reset search tree
-                    iterationTrainExamples += self.executeEpisode()
-
+                    # self.mcts = MCTS(self.game, self.nnet, self.args)  # reset search tree
+                    # iterationTrainExamples += self.executeEpisode()
+                    iterationTrainExamples += q.get()
+                    p = Process(target=self.executeEpisode, args=tasks[pi])
+                    p.start()
+                    pi += i
                 # save the iteration examples to the history
                 self.trainExamplesHistory.append(iterationTrainExamples)
 
@@ -113,6 +128,9 @@ class Coach():
                 trainExamples.extend(e)
             shuffle(trainExamples)
 
+            # return to cuda, if avaialble
+            # self.nnet.nnet = self.nnet.nnet.to('cuda') if torch.cuda.is_available() else self.nnet.nnet
+
             # training new network, keeping a copy of the old one
             self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
             self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
@@ -122,8 +140,8 @@ class Coach():
             nmcts = MCTS(self.game, self.nnet, self.args)
 
             log.info('PITTING AGAINST PREVIOUS VERSION')
-            arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
+            arena = ArenaMQTT(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
+                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, use_mqtt=False)
             pwins, nwins, draws = arena.playGames(self.args.arenaCompare)
 
             log.info('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))

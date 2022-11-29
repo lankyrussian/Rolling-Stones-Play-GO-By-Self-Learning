@@ -4,7 +4,7 @@ from master
 """
 
 import logging
-
+import multiprocessing
 import coloredlogs
 
 from Coach import Coach
@@ -25,16 +25,17 @@ args = dotdict({
     'numMCTSSims': 25,          # Number of games moves for MCTS to simulate.
     'arenaCompare': 40,         # Number of games to play during arena play to determine if new net will be accepted.
     'cpuct': 1,
+    'processes': 16,
 
     'checkpoint': './temp/',
-    'load_model': True,
-    'load_folder_file': ('./temp','checkpoint_3.pth.tar'),
+    'load_model': False,
+    'load_folder_file': ('./temp','checkpoint_19.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
-
 })
 
 
 def main():
+    multiprocessing.set_start_method('spawn')
     log.info('Loading %s...', Game.__name__)
     g = Game(5)
 

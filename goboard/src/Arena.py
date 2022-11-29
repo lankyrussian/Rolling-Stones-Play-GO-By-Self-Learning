@@ -48,7 +48,6 @@ class ArenaMQTT():
         for pos, val in np.ndenumerate(board_diff):
             if val != 0:
                 idx = pos[0] * n + pos[1]
-                print(f'sending {idx}')
                 if board_pieces[pos] != 0:
                     msg = struct.pack('ii', idx, 0)
                     self.send("/gomove", msg)

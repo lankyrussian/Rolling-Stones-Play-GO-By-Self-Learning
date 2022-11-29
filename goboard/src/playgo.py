@@ -14,12 +14,12 @@ def main():
     parser.add_argument('--log',        type=str, default='log.txt')
     parser.add_argument('--board_size', type=int, default=5)
     parser.add_argument('--num_games',  type=int, default=2)
-    parser.add_argument('--com_type', type=str, default="mqtt")
+    parser.add_argument('--com_type',   type=str, default="mqtt")
     parser.add_argument('--player1',    type=str, default='h')
     parser.add_argument('--player2',    type=str, default='a')
-    parser.add_argument('--mqtt_broker', type=str, default='localhost')
-    parser.add_argument('--mqtt_port', type=int, default=1883)
-    parser.add_argument('--use_mqtt', type=bool, default=True)
+    parser.add_argument('--mqtt_broker',type=str, default='localhost')
+    parser.add_argument('--mqtt_port',  type=int, default=1883)
+    parser.add_argument('--use_mqtt',   type=bool, default=True)
 
     args = parser.parse_args()
     board_size = args.board_size
