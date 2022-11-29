@@ -8,4 +8,6 @@ env.reset()
 
 for _ in range(1000):
     env.render("human")
-    obs = env.step(env.action_space.sample())
+    a = env.action_space.sample()
+    print(a)
+    obs, r, done, _ = env.step(a)

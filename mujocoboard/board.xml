@@ -52,55 +52,55 @@
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0.5 0.5 0.5 0.75" size="0.15" type="sphere"/>
         </body>
-        <body name="s12" pos="0.9900000000000002 0.33000000000000007 0.4">
+        <body name="s12" pos="-0.33000000000000007 0.9900000000000002 0.4">
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
         </body>
-        <body name="s13" pos="-0.33000000000000007 0.9900000000000002 0.4">
+        <body name="s13" pos="0.9900000000000002 0.9900000000000002 0.4">
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0 0 0 1" size="0.15" type="sphere"/>
         </body>
-        <body name="s14" pos="0.33000000000000007 -0.33000000000000007 0.4">
-            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
-            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
-        </body>
-        <body name="s15" pos="-1.6500000000000001 -1.6500000000000001 0.4">
-            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
-            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
-        </body>
-        <body name="s16" pos="-0.33000000000000007 -0.33000000000000007 0.4">
-            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
-            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
-        </body>
-        <body name="s17" pos="0.33000000000000007 0.9900000000000002 0.4">
-            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
-            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
-        </body>
-        <body name="s18" pos="-0.33000000000000007 -1.6500000000000001 0.4">
+        <body name="s14" pos="0.33000000000000007 0.9900000000000002 0.4">
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0 0 0 1" size="0.15" type="sphere"/>
         </body>
-        <body name="s19" pos="-0.99 0.9900000000000002 0.4">
+        <body name="s15" pos="0.33000000000000007 -0.33000000000000007 0.4">
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
         </body>
-        <body name="s20" pos="-1.6500000000000001 0.33000000000000007 0.4">
-            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
-            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
-        </body>
-        <body name="s21" pos="0.9900000000000002 -0.99 0.4">
+        <body name="s16" pos="0.9900000000000002 0.33000000000000007 0.4">
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0 0 0 1" size="0.15" type="sphere"/>
         </body>
-        <body name="s22" pos="0.33000000000000007 0.33000000000000007 0.4">
-            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
-            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0 0 0 1" size="0.15" type="sphere"/>
-        </body>
-        <body name="s23" pos="-0.99 -0.99 0.4">
+        <body name="s17" pos="0.9900000000000002 -0.99 0.4">
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
         </body>
-        <body name="s24" pos="-1.6500000000000001 0.9900000000000002 0.4">
+        <body name="s18" pos="-1.6500000000000001 -0.99 0.4">
+            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
+            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
+        </body>
+        <body name="s19" pos="-0.99 -0.99 0.4">
+            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
+            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0 0 0 1" size="0.15" type="sphere"/>
+        </body>
+        <body name="s20" pos="-1.6500000000000001 0.9900000000000002 0.4">
+            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
+            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0 0 0 1" size="0.15" type="sphere"/>
+        </body>
+        <body name="s21" pos="-0.99 -0.33000000000000007 0.4">
+            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
+            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
+        </body>
+        <body name="s22" pos="-0.99 -1.6500000000000001 0.4">
+            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
+            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0 0 0 1" size="0.15" type="sphere"/>
+        </body>
+        <body name="s23" pos="0.33000000000000007 -0.99 0.4">
+            <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
+            <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
+        </body>
+        <body name="s24" pos="-0.33000000000000007 -0.99 0.4">
             <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
             <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="1 1 1 1" size="0.15" type="sphere"/>
         </body>

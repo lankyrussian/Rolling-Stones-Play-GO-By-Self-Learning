@@ -19,10 +19,10 @@ def handleMove(cli, _, tm):
     global robot_to_cmd
     topic = tm.topic
     cmd = topic.split("/")
-    if cmd[0] == "robotmove":
+    if cmd[1] == "robotmove":
         message = tm.payload.decode("utf-8")
-        robot_to_cmd[cmd[-1]] = [int(x)  for x in message.split(',')]
-    elif cmd[0] == "gopath":
+        robot_to_cmd[cmd[-1]] = [int(x) for x in message.split(',')]
+    elif cmd[1] == "gopath":
         message = []
         for i in range(len(tm.payload)//4):
             tempBytes = tm.payload[(i*4):((i*4)+4)]
