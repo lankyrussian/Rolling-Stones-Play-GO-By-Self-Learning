@@ -77,7 +77,7 @@ class Sphero:
         self.model = model
         self.sim = sim
         self.vel_integ = np.zeros(3)
-        self.vel_integ_gamma = 0.1
+        self.vel_integ_gamma = 0.5
 
     def getPos(self):
         return self.sim.data.body_xpos[self.robot_id]
@@ -93,11 +93,11 @@ class Sphero:
         target_y = self.y * CELL_LEN - REAL_LEN / 2
         # get the velocity
         vel = self.sim.data.body_xvelp[self.robot_id]
-        self.vel_integ = self.vel_integ_gamma * self.vel_integ + vel
+        self.vel_integ = self.vel_integ_gamma * (self.vel_integ + vel)
         # get the distance to target
         dist = math.sqrt((pos[0] - target_x)**2 + (pos[1] - target_y)**2)
         # check if target is reached
-        if dist < 0.1 and abs(vel[0]) < 0.01 and abs(vel[1]) < 0.01:
+        if dist < 0.02 and abs(vel[0]) < 0.01 and abs(vel[1]) < 0.01:
             self.centered = True
             self.sim.data.xfrc_applied[self.robot_id] = np.zeros_like(
                 self.sim.data.xfrc_applied[self.robot_id])
@@ -106,11 +106,14 @@ class Sphero:
             # get the direction to target
             dir_x = (target_x - pos[0])
             dir_y = (target_y - pos[1])
+            torque_x = 5*dir_x - 0.5* vel[0] - self.vel_integ[0]
+            torque_y = 5*dir_y - 0.5* vel[1] - self.vel_integ[1]
             # apply the force
             self.sim.data.xfrc_applied[self.robot_id] = [
                 0, 0, 0,
-                dir_x - 0.3* vel[0] - self.vel_integ[0],
-                -dir_y + 0.3* vel[1] + self.vel_integ[1], 0]
+                -torque_y,
+                torque_x,
+                0]
 
     def followPath(self):
         if self.cmd_queue.empty():
@@ -122,8 +125,8 @@ class Sphero:
         print(f"sphero {self.robot_id} following path, {self.x, self.y} -> {cmd[1], cmd[0]}")
         self.x = cmd[1]
         self.y = cmd[0]
-        self.x = np.clip(self.x, 0, B_LEN-1)
-        self.y = np.clip(self.y, 0, B_LEN-1)
+        self.x = np.clip(self.x, 0, LOGIC_LEN-1)
+        self.y = np.clip(self.y, 0, LOGIC_LEN-1)
         return False
 
     def setColor(self, color):
@@ -180,11 +183,13 @@ class VirtualGoBoardMQTT:
                     pathcolor = self.path_queue.get()
                     path =  pathcolor[0]
                     color = pathcolor[1]
+                    # starting coordinate
                     cy, cx = path[0]
                     assert self.coord_to_robot[cy][cx] != -1, f"no robot at position {cx} {cy}"
                     sphere = self.robots[int(self.coord_to_robot[cy][cx])-1]
                     sphere.setColor(color)
                     self.running_sphero = sphere
+                    print(f"robot {sphere.robot_id} started following path")
                     for xy in path:
                         self.running_sphero.cmd_queue.put(xy)
             # center the robots and get their true positions
