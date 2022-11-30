@@ -88,7 +88,7 @@ void PathFinder::OnMessage(struct mosquitto * msqt, void * obj, const struct mos
 		}
 		int* msgArr = static_cast<int*>(msg->payload);
 		pfPtr->mapInitialized = true;
-		pfPtr->InitializeAndExpand(msgArr, msg->payloadlen);
+		pfPtr->InitializeAndExpand(msgArr, msg->payloadlen / 4);
 
 	}
 }
@@ -110,13 +110,16 @@ void PathFinder::InitializeAndExpand(int* map, int len)
 	for (int i = 0; i < len; i++)
 	{
 		expandedMap.push_back(map[i]);
+		std::cout << map[i] << ' ';
+		if ((i+1) % 15 == 0)
+			std::cout << std::endl;
 	}
 
 	//init astar map
 	for (int i = 0; i < expandedMap.size(); i++)
 	{
 		int num = expandedMap.at(i);
-		if (num == 0)
+		if (num != 0)
 		{
 			int column = (i % 15);
 			int row = (i - column) / 15;
@@ -132,12 +135,11 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 		return;
 
 	int rowCount = newIndex / 5;
-	int expandedIndex = 45 + (newIndex * 2) + (rowCount * 20);
+	int expandedIndex = 48 + (newIndex * 2) + (rowCount * 20);
 
 	int column = (expandedIndex % 15);
 	int row = (expandedIndex - column) / 15;
 
-	expandedMap.at((row*15) + column) = playerColor;
 
 	std::vector<int> availableStonesIndex;
 	for(int i = 0; i < expandedMap.size(); i++)
@@ -148,39 +150,54 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 			int currentIndex = i - (rowCount * 15);
 			if (currentIndex < 2 || currentIndex > 11)
 			{
-				if (expandedMap.at(i) == 1)
+				int var1 = expandedMap.at(i);
+				if (var1 == 1)
 					availableStonesIndex.push_back(i);
 			}
 		}
-		if (expandedMap.at(i) == 1)
+		int var2 = expandedMap.at(i);
+		if (var2 == 1)
 			availableStonesIndex.push_back(i);
 	}
 
 	std::vector<AStar::Vec2i> path;
-	int PathWeight = INT8_MAX;
+	int PathWeight = INT32_MAX;
 	for(int i = 0; i < availableStonesIndex.size(); i++)
 	{	
 		int tempColumn = (availableStonesIndex.at(i) % 15);
 		int tempRow = (availableStonesIndex.at(i) - column) / 15;
-		std::vector<AStar::Vec2i> tempPath = astarObj.findPath({ row, column }, { tempRow,tempColumn });
-		if (tempPath.size() < PathWeight)
-			path = tempPath;
+		astarObj.removeCollision({tempRow, tempColumn});
+		std::vector<AStar::Vec2i> tempPath = astarObj.findPath({ tempRow, tempColumn }, { row , column });
+		astarObj.addCollision({tempRow, tempColumn});
+		int x = tempPath[0].x;
+		int y = tempPath[0].y;
+		int size = tempPath.size();
+		int mainSize = path.size();
+
+		if (x == row && y == column)
+		{
+			if (tempPath.size() < PathWeight)
+			{
+				path = tempPath;
+				PathWeight = tempPath.size();
+			}
+		}
 
 	}
 
 	pathCooridnates.clear();
-	pathCooridnates.push_back(playerColor);
 	for (auto& coordinate : path)
 	{
-		pathCooridnates.push_back(coordinate.x);
 		pathCooridnates.push_back(coordinate.y);
+		pathCooridnates.push_back(coordinate.x);
 	}
-
+	pathCooridnates.push_back(playerColor);
+	std::reverse(pathCooridnates.begin(), pathCooridnates.end());
 	std::cout << "Adding Stone: " << std::endl;
 	for (int i = 0; i < pathCooridnates.size(); i++)
 	{
 		std::cout << pathCooridnates.at(i) << ' ';
-		if ((i+1) % 2 == 0)
+		if (i % 2 == 0)
 			std::cout << std::endl;
 	}
 	
@@ -191,6 +208,7 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 
 	//after completion
 	astarObj.addCollision({ row, column });
+	expandedMap.at((row*15) + column) = 1;
 
 }
 
@@ -201,7 +219,7 @@ void PathFinder::RemoveStone(int index)
 	
 	
 	int rowCount = index / 5;
-	int expandedIndex = 45 + (index * 2) + (rowCount * 20);
+	int expandedIndex = 48 + (index * 2) + (rowCount * 20);
 
 	int column = (expandedIndex % 15);
 	int row = (expandedIndex - column) / 15;

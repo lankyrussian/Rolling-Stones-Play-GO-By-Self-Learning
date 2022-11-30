@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <vector>
+#include <algorithm>
 #include "AStar.h"
 #include <mosquitto.h>
 
