@@ -107,6 +107,7 @@ void PathFinder::InitializeAndExpand(int* map, int len)
 	astarObj.setDiagonalMovement(false);
 
 	//init internal data struct
+	expandedMap.clear();
 	for (int i = 0; i < len; i++)
 	{
 		expandedMap.push_back(map[i]);
@@ -144,20 +145,24 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 	std::vector<int> availableStonesIndex;
 	for(int i = 0; i < expandedMap.size(); i++)
 	{
-		int rowCount = i / 15;
-		if (rowCount > 2)
-		{
-			int currentIndex = i - (rowCount * 15);
-			if (currentIndex < 2 || currentIndex > 11)
-			{
-				int var1 = expandedMap.at(i);
-				if (var1 == 1)
-					availableStonesIndex.push_back(i);
-			}
-		}
-		int var2 = expandedMap.at(i);
-		if (var2 == 1)
-			availableStonesIndex.push_back(i);
+		int currRow = i / 15;
+		int currColumn = i % 15;
+		if (currRow > 2 && currRow < 12 && currColumn > 2 && currColumn < 12){
+           continue;
+        }
+//		{
+//			int currentIndex = i - (rowCount * 15);
+//			if (currentIndex < 2 || currentIndex > 11)
+//			{
+//				int var1 = expandedMap.at(i);
+//				if (var1 == 1)
+//					availableStonesIndex.push_back(i);
+//			}
+//		} else {
+        int var2 = expandedMap.at(i);
+        if (var2 == 1)
+            availableStonesIndex.push_back(i);
+//		}
 	}
 
 	std::vector<AStar::Vec2i> path;

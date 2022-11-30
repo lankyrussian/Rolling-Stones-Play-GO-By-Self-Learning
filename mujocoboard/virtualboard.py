@@ -6,6 +6,8 @@ On the floor, there's a cylinder with X and Y slide joints, so it can
 be pushed around with the robot. There's also a box without joints. Since
 the box doesn't have joints, it's fixed and can't be pushed around.
 """
+import struct
+
 from mujoco_py import load_model_from_path, MjSim, MjViewer
 import math
 import os
@@ -22,12 +24,13 @@ XB, YB = 3, 3
 LOGIC_LEN = B_LEN * 2-1 + XB * 2
 REAL_LEN = LOGIC_LEN * CELL_LEN
 # how many steps the command applies external force
-CMD_DURATION = 5
+CMD_COOLDOWN = 250
+F = 5.2
 action_to_force = {
-    (0,1): [CMD_DURATION,0,0,0,5,0,0],
-    (0,-1): [CMD_DURATION,0,0,0,0,5,0],
-    (1,0): [CMD_DURATION,0,0,0,-5,0,0],
-    (-1,0): [CMD_DURATION,0,0,0,0,-5,0],
+    (0,1):  [5,0,0,0, 0, F,0],
+    (0,-1): [5,0,0,0, 0,-F,0],
+    (1,0):  [5,0,0,0,-F, 0,0],
+    (-1,0): [5,0,0,0, F, 0,0],
 }
 
 class Queue:
@@ -95,11 +98,15 @@ class VirtualGoBoardMQTT:
             for robot, cmdq in robot_to_cmd.items():
                 if not cmdq.empty():
                     cmd = cmdq.peek()
-                    if cmd[0] == 0:
+                    if cmd[0] <= -CMD_COOLDOWN:
                         cmdq.get()
+                    elif cmd[0] <= 0:
+                        self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.zeros_like(
+                            self.sim.data.xfrc_applied[self.robot_to_id[robot]])
                     else:
-                        cmd[0] -= 1
-                    self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.array(cmd[1:])
+                        self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.array(cmd[1:])
+                    cmd[0] -= 1
+                    break
                 else:
                     self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.zeros_like(
                         self.sim.data.xfrc_applied[self.robot_to_id[robot]])
@@ -137,16 +144,15 @@ class VirtualGoBoardMQTT:
         # check that the robot is present at the start of the path
         cx, cy = path[0]
         assert self.coord_to_robot[(cx, cy)] != -1, f"no robot at position {cx} {cy}"
+        robot = self.coord_to_robot[(cx, cy)]
         while len(path)>1:
-            # current position
-            cx, cy = path[0]
+            path = path[1:]
             # next position
-            nx, ny = path[1]
+            nx, ny = path[0]
             assert self.coord_to_robot[(nx, ny)] == -1, f"position {nx} {ny} is occupied"
             action = (nx - cx, ny - cy)
-            robot = self.coord_to_robot[(cx, cy)]
             robot_to_cmd[robot].put(np.array(action_to_force[action]))
-            path = path[1:]
+            cx, cy = nx, ny
 
     def handleMove(self, cli, _, tm):
         global robot_to_cmd
@@ -158,8 +164,7 @@ class VirtualGoBoardMQTT:
         elif cmd[1] == "gopath":
             message = []
             for i in range(len(tm.payload)//4):
-                tempBytes = tm.payload[(i*4):((i*4)+4)]
-                message.append(int.from_bytes(tempBytes, "little"))
+                message.append(struct.unpack('i', tm.payload[i*4:(i+1)*4])[0])
             color = message[0]
             coords = []
             for i in range(len(message)//2):

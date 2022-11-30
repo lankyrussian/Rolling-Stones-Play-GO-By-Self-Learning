@@ -21,7 +21,7 @@ MODEL_XML = """<?xml version="1.0" ?>
         <camera euler="0 0 0" fovy="40" name="rgb" pos="0 0 2.5"></camera>
         SPHEROS_
         <body name="floor" pos="FLOOR_ 0.025">
-            <geom condim="3" size="FLOORSIZE_ 0.02" rgba="0.8 0.8 0.8 1" type="box"/>
+            <geom condim="3" size="FLOORSIZE_ 0.02" rgba="0.8 0.8 0.8 0.5" type="box"/>
         </body>
         LINES_
     </worldbody>
@@ -63,12 +63,12 @@ def build_env(sphero_poss, field_size, colors=None):
     # add board vertical and horizontal lines
     lines_str = ""
     n_rows = int(math.sqrt(len(sphero_poss)))
-    for i in range(0, n_rows):
-        line_str_ = f"""<body name="line{i}h" pos="0 {i * 2 *cell_len + 3 * cell_len - field_size[0] / 2} 0.025">
-        <geom condim="3" size="{field_size[1]} 0.02 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+    for i in range(0, n_rows+1):
+        line_str_ = f"""<body name="line{i}h" pos="0 {i * 2 *cell_len + 3 * cell_len - field_size[0] / 2} 0.0">
+        <geom condim="1" friction="0 0 0" size="{field_size[1]} 0.02 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
     </body>
-    <body name="line{i}v" pos="{i * 2 * cell_len + 3 * cell_len - field_size[0] / 2} 0 0.025">
-        <geom condim="3" size="0.03 {field_size[1]} 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+    <body name="line{i}v" pos="{i * 2 * cell_len + 3 * cell_len - field_size[0] / 2} 0 0.0">
+        <geom condim="1" friction="0 0 0" size="0.03 {field_size[1]} 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
     </body>"""
         lines_str += line_str_
 

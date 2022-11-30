@@ -101,28 +101,33 @@
         <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="0.5 0.5 0.5 0.75" size="0.15" type="sphere"/>
     </body>
         <body name="floor" pos="0 0 0.025">
-            <geom condim="3" size="5.1000000000000005 5.1000000000000005 0.02" rgba="0.8 0.8 0.8 1" type="box"/>
+            <geom condim="3" size="5.1000000000000005 5.1000000000000005 0.02" rgba="0.8 0.8 0.8 0.5" type="box"/>
         </body>
-        <body name="line0h" pos="0 -1.5300000000000002 0.025">
-        <geom condim="3" size="5.1000000000000005 0.02 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+        <body name="line0h" pos="0 -1.5300000000000002 0.0">
+        <geom condim="1" friction="0 0 0" size="5.1000000000000005 0.02 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
     </body>
-    <body name="line0v" pos="-1.5300000000000002 0 0.025">
-        <geom condim="3" size="0.03 5.1000000000000005 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
-    </body><body name="line1h" pos="0 -0.8500000000000001 0.025">
-        <geom condim="3" size="5.1000000000000005 0.02 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+    <body name="line0v" pos="-1.5300000000000002 0 0.0">
+        <geom condim="1" friction="0 0 0" size="0.03 5.1000000000000005 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
+    </body><body name="line1h" pos="0 -0.8500000000000001 0.0">
+        <geom condim="1" friction="0 0 0" size="5.1000000000000005 0.02 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
     </body>
-    <body name="line1v" pos="-0.8500000000000001 0 0.025">
-        <geom condim="3" size="0.03 5.1000000000000005 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
-    </body><body name="line2h" pos="0 -0.17000000000000037 0.025">
-        <geom condim="3" size="5.1000000000000005 0.02 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+    <body name="line1v" pos="-0.8500000000000001 0 0.0">
+        <geom condim="1" friction="0 0 0" size="0.03 5.1000000000000005 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
+    </body><body name="line2h" pos="0 -0.17000000000000037 0.0">
+        <geom condim="1" friction="0 0 0" size="5.1000000000000005 0.02 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
     </body>
-    <body name="line2v" pos="-0.17000000000000037 0 0.025">
-        <geom condim="3" size="0.03 5.1000000000000005 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
-    </body><body name="line3h" pos="0 0.5099999999999998 0.025">
-        <geom condim="3" size="5.1000000000000005 0.02 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+    <body name="line2v" pos="-0.17000000000000037 0 0.0">
+        <geom condim="1" friction="0 0 0" size="0.03 5.1000000000000005 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
+    </body><body name="line3h" pos="0 0.5099999999999998 0.0">
+        <geom condim="1" friction="0 0 0" size="5.1000000000000005 0.02 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
     </body>
-    <body name="line3v" pos="0.5099999999999998 0 0.025">
-        <geom condim="3" size="0.03 5.1000000000000005 0.02" rgba="0.2 0.2 0.2 1" type="box"/>
+    <body name="line3v" pos="0.5099999999999998 0 0.0">
+        <geom condim="1" friction="0 0 0" size="0.03 5.1000000000000005 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
+    </body><body name="line4h" pos="0 1.19 0.0">
+        <geom condim="1" friction="0 0 0" size="5.1000000000000005 0.02 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
+    </body>
+    <body name="line4v" pos="1.19 0 0.0">
+        <geom condim="1" friction="0 0 0" size="0.03 5.1000000000000005 0.02" rgba="1.0 1.0 1.0 1" type="box"/>
     </body>
     </worldbody>
 </mujoco>
