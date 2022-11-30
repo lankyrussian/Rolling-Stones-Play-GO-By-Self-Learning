@@ -107,7 +107,7 @@ class VirtualGoBoardMQTT:
         # check that the robot is present at the start of the path
         cx, cy = path[0]
         assert self.coord_to_robot[(cx, cy)] != -1, f"no robot at position {cx} {cy}"
-        while len(path>1):
+        while len(path)>1:
             # current position
             cx, cy = path[0]
             # next position
