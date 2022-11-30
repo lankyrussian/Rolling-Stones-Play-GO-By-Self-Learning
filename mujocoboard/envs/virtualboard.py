@@ -11,7 +11,6 @@ import math
 
 import gym
 from mujoco_py import load_model_from_xml, MjSim, MjViewer, MjRenderContextOffscreen
-import os
 import numpy as np
 import random as rnd
 
@@ -33,15 +32,15 @@ cell_len = 0.34
 b_len = 5
 board_size = b_len**2
 x_b, y_b = 3, 3
-real_len = b_len * 2 + x_b*2
+real_len = b_len * 2-1 + x_b*2
 # how many steps the command applies external force
 CMD_DURATION = 5
 n_robots = int(b_len**2)
 action_to_force = {
-    0: [5,0,0,0,5,0,0],
-    1: [5,0,0,0,0,5,0],
-    2: [5,0,0,0,-5,0,0],
-    3: [5,0,0,0,0,-5,0],
+    0: [CMD_DURATION,0,0,0,5,0,0],
+    1: [CMD_DURATION,0,0,0,0,5,0],
+    2: [CMD_DURATION,0,0,0,-5,0,0],
+    3: [CMD_DURATION,0,0,0,0,-5,0],
 }
 
 def build_env(sphero_poss, field_size, colors=None):
@@ -52,7 +51,7 @@ def build_env(sphero_poss, field_size, colors=None):
     for si, pos in enumerate(sphero_poss):
         rgba = " ".join([str(i) for i in colors[si]]) if colors else "0.5 0.5 0.5 0.75"
         sphero_str = f"""
-    <body name="s{si}" pos="{pos[0]} {pos[1]} 0.4">
+    <body name="s{si}" pos="{pos[0]} {pos[1]} 0.3">
         <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
         <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="{rgba}" size="0.15" type="sphere"/>
     </body>"""
@@ -157,17 +156,14 @@ class SpherosEnv(gym.Env):
         # only apply cmd if the previous cmd finished
         robot_id = action // 4
         if robot_id < n_robots and self.robot_to_cmd[f's{robot_id}'][0] == 0:
-            print(f"robot {robot_id} action {action}")
             self.robot_to_cmd[f's{robot_id}'] = np.array(action_to_force[action % 4])
         for robot, cmd in self.robot_to_cmd.items():
             if cmd[0] > 0:
                 cmd[0] -= 1
-                print(robot,end=";")
                 self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.array(cmd[1:])
             else:
                 self.sim.data.xfrc_applied[self.robot_to_id[robot]] = \
                     np.zeros_like(self.sim.data.xfrc_applied[self.robot_to_id[robot]])
-        print()
 
         self.sim.step()
         return self.get_observations(), 0, False, {}
