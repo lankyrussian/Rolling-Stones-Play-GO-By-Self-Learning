@@ -134,17 +134,17 @@ class VirtualGoBoardMQTT:
         self.client.publish("/gomap", occupied.tobytes())
 
     def moveStone(self, path, color):
-        # set robot color if moving to a board
-        if color == 1:
-            self.model.geom_rgba[color] = (1, 1, 1, 1)
-        elif color == -1:
-            self.model.geom_rgba[color] = (0, 0, 0, 1)
-        else:
-            self.model.geom_rgba[color] = (0.5, 0.5, 0.5, 0.75)
         # check that the robot is present at the start of the path
         cx, cy = path[0]
         assert self.coord_to_robot[(cx, cy)] != -1, f"no robot at position {cx} {cy}"
         robot = self.coord_to_robot[(cx, cy)]
+        # set robot color if moving to a board
+        if color == 1:
+            self.model.geom_rgba[self.robot_to_id[robot]-1] = (1, 1, 1, 1)
+        elif color == -1:
+            self.model.geom_rgba[self.robot_to_id[robot]-1] = (0, 0, 0, 1)
+        else:
+            self.model.geom_rgba[self.robot_to_id[robot]-1] = (0.5, 0.5, 0.5, 0.75)
         while len(path)>1:
             path = path[1:]
             # next position
