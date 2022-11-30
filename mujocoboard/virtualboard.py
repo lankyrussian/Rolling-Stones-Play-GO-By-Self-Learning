@@ -11,8 +11,6 @@ import math
 import os
 import numpy as np
 import paho.mqtt.client as mqtt
-from queue import Queue
-
 
 # n time steps to apply force, x-force, y-force, z-force, x-torque, y-torque, z-torque
 robot_to_cmd = {}
@@ -31,6 +29,37 @@ action_to_force = {
     (1,0): [CMD_DURATION,0,0,0,-5,0,0],
     (-1,0): [CMD_DURATION,0,0,0,0,-5,0],
 }
+
+class Queue:
+    def __init__(self, size):
+        self.queue = [None] * size
+        self.front = 0
+        self.rear = 0
+        self.size = size
+        self.available = size
+
+    def put(self, item):
+        if self.available == 0:
+            print('Queue Overflow!')
+        else:
+            self.queue[self.rear] = item
+            self.rear = (self.rear + 1) % self.size
+            self.available -= 1
+
+    def get(self):
+        if self.available == self.size:
+            print('Queue Underflow!')
+        else:
+            self.queue[self.front] = None
+            self.front = (self.front + 1) % self.size
+            self.available += 1
+
+    def peek(self):
+        return self.queue[self.front]
+
+    def empty(self):
+        return self.available==self.size
+
 
 class VirtualGoBoardMQTT:
     def __init__(self):
@@ -55,16 +84,14 @@ class VirtualGoBoardMQTT:
         self.coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
         for n in range(B_SIZE-1):
             self.robot_to_id[n] = self.model.body_name2id(f's{n}')
-            robot_to_cmd[n] = Queue()
+            robot_to_cmd[n] = Queue(100)
 
         self.running = True
 
     def run(self):
         while self.running:
             self.t += 1
-            # reset robot coordinates
-            old_coord_to_robot = self.coord_to_robot
-            self.coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
+            new_coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
             for robot, cmdq in robot_to_cmd.items():
                 if not cmdq.empty():
                     cmd = cmdq.peek()
@@ -79,10 +106,13 @@ class VirtualGoBoardMQTT:
                 rx, ry, _ = self.sim.data.body_xpos[self.robot_to_id[robot]]
                 x, y = round((ROBOT_RAD+rx+REAL_LEN/2) / CELL_LEN ), round((ROBOT_RAD+ry+REAL_LEN/2)/CELL_LEN)
                 try:
-                    self.coord_to_robot[y][x] = robot
+                    new_coord_to_robot[y][x] = robot
                 except:
                     print(f"error, robot out of bounds: {robot}, {x}, {y}")
-            if not np.array_equal(old_coord_to_robot, self.coord_to_robot):
+            # reset robot coordinates
+            old_coord_to_robot = self.coord_to_robot
+            if not np.array_equal(old_coord_to_robot, new_coord_to_robot):
+                self.coord_to_robot = new_coord_to_robot
                 print(self.coord_to_robot)
                 self.sendUpdatedMap(self.coord_to_robot)
 
