@@ -5,7 +5,7 @@ cell_len = 0.34
 b_len = 5
 board_size = b_len**2
 x_b, y_b = 3, 3
-real_len = b_len * 2 + x_b*2
+real_len = b_len * 2-1 + x_b*2
 
 def make_random_env(n_on_board=13):
     sphero_positions = []
@@ -14,7 +14,7 @@ def make_random_env(n_on_board=13):
     colors = []
     # stones that are outside
     out_idx = (0, 0)
-    for i in range(1, board_size - n_on_board+1):
+    for i in range(1, board_size - n_on_board):
         x = out_idx[0]
         y = out_idx[1]
         # randomly assign color

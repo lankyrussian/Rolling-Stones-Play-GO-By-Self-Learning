@@ -16,6 +16,7 @@ from queue import Queue
 
 # n time steps to apply force, x-force, y-force, z-force, x-torque, y-torque, z-torque
 robot_to_cmd = {}
+ROBOT_RAD = 0.15
 CELL_LEN = 0.34
 B_LEN = 5
 B_SIZE = B_LEN ** 2
@@ -30,9 +31,6 @@ action_to_force = {
     (1,0): [CMD_DURATION,0,0,0,-5,0,0],
     (-1,0): [CMD_DURATION,0,0,0,0,-5,0],
 }
-
-N_ROBOTS = B_SIZE-1
-
 
 class VirtualGoBoardMQTT:
     def __init__(self):
@@ -54,13 +52,10 @@ class VirtualGoBoardMQTT:
         self.coord_to_robot = {}
 
         self.robot_to_id = {}
-        for n in range(N_ROBOTS):
+        self.coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
+        for n in range(B_SIZE-1):
             self.robot_to_id[n] = self.model.body_name2id(f's{n}')
             robot_to_cmd[n] = Queue()
-            rx, ry, _ = self.sim.data.body_xpos[self.robot_to_id[n]]
-            x, y = int((rx / CELL_LEN) - LOGIC_LEN / 2), int((ry / CELL_LEN) - LOGIC_LEN / 2)
-            self.coord_to_robot = np.zeros((LOGIC_LEN, LOGIC_LEN))
-            self.coord_to_robot[y][x] = n
 
         self.running = True
 
@@ -82,7 +77,7 @@ class VirtualGoBoardMQTT:
                     self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.zeros_like(
                         self.sim.data.xfrc_applied[self.robot_to_id[robot]])
                 rx, ry, _ = self.sim.data.body_xpos[self.robot_to_id[robot]]
-                x, y = int((rx / CELL_LEN) - LOGIC_LEN / 2), int((ry / CELL_LEN) - LOGIC_LEN / 2)
+                x, y = round((ROBOT_RAD+rx+REAL_LEN/2) / CELL_LEN ), round((ROBOT_RAD+ry+REAL_LEN/2)/CELL_LEN)
                 try:
                     self.coord_to_robot[y][x] = robot
                 except:
@@ -98,6 +93,7 @@ class VirtualGoBoardMQTT:
 
     def sendUpdatedMap(self, map):
         occupied = (map != -1).astype(np.int32)
+        print(occupied.sum())
         self.client.publish("/gomap", occupied.tobytes())
 
     def moveStone(self, path, color):
