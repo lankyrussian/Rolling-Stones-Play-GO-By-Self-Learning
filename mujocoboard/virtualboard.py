@@ -15,7 +15,6 @@ import numpy as np
 import paho.mqtt.client as mqtt
 
 # n time steps to apply force, x-force, y-force, z-force, x-torque, y-torque, z-torque
-robot_to_cmd = {}
 ROBOT_RAD = 0.15
 CELL_LEN = 0.34
 B_LEN = 5
@@ -53,15 +52,89 @@ class Queue:
         if self.available == self.size:
             print('Queue Underflow!')
         else:
+            item = self.queue[self.front]
             self.queue[self.front] = None
             self.front = (self.front + 1) % self.size
             self.available += 1
+            return item
 
     def peek(self):
         return self.queue[self.front]
 
     def empty(self):
         return self.available==self.size
+
+
+class Sphero:
+    def __init__(self, xy, robot_id, model, sim):
+        print('Spawning robot at', xy)
+        self.y, self.x = xy
+        self.r = ROBOT_RAD
+        self.color = 0
+        self.cmd_queue = Queue(100)
+        self.robot_id = robot_id
+        self.centered = False
+        self.model = model
+        self.sim = sim
+        self.vel_integ = np.zeros(3)
+        self.vel_integ_gamma = 0.1
+
+    def getPos(self):
+        return self.sim.data.body_xpos[self.robot_id]
+
+    def center(self):
+        """apply external torque to center the robot in a target cell
+        proportional to velocity and distance to target
+        """
+        # get the current position
+        pos = self.getPos()
+        # get the target position
+        target_x = self.x * CELL_LEN - REAL_LEN / 2
+        target_y = self.y * CELL_LEN - REAL_LEN / 2
+        # get the velocity
+        vel = self.sim.data.body_xvelp[self.robot_id]
+        self.vel_integ = self.vel_integ_gamma * self.vel_integ + vel
+        # get the distance to target
+        dist = math.sqrt((pos[0] - target_x)**2 + (pos[1] - target_y)**2)
+        # check if target is reached
+        if dist < 0.1 and abs(vel[0]) < 0.01 and abs(vel[1]) < 0.01:
+            self.centered = True
+            self.sim.data.xfrc_applied[self.robot_id] = np.zeros_like(
+                self.sim.data.xfrc_applied[self.robot_id])
+        else:
+            self.centered = False
+            # get the direction to target
+            dir_x = (target_x - pos[0])
+            dir_y = (target_y - pos[1])
+            # apply the force
+            self.sim.data.xfrc_applied[self.robot_id] = [
+                0, 0, 0,
+                dir_x - 0.3* vel[0] - self.vel_integ[0],
+                -dir_y + 0.3* vel[1] + self.vel_integ[1], 0]
+
+    def followPath(self):
+        if self.cmd_queue.empty():
+            print('finished following path')
+            return True
+        if not self.centered:
+            return False
+        cmd = self.cmd_queue.get()
+        print(f"sphero {self.robot_id} following path, {self.x, self.y} -> {cmd[1], cmd[0]}")
+        self.x = cmd[1]
+        self.y = cmd[0]
+        self.x = np.clip(self.x, 0, B_LEN-1)
+        self.y = np.clip(self.y, 0, B_LEN-1)
+        return False
+
+    def setColor(self, color):
+        self.color = color
+        # set robot color if moving to a board
+        if color == 1:
+            self.model.geom_rgba[self.robot_id - 1] = (1, 1, 1, 1)
+        elif color == -1:
+            self.model.geom_rgba[self.robot_id - 1] = (0, 0, 0, 1)
+        else:
+            self.model.geom_rgba[self.robot_id - 1] = (0.5, 0.5, 0.5, 0.75)
 
 
 class VirtualGoBoardMQTT:
@@ -82,40 +155,47 @@ class VirtualGoBoardMQTT:
         self.t = 0
         # path level coordinate to robot
         self.coord_to_robot = {}
+        self.robots = []
 
         self.robot_to_id = {}
         self.coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
         for n in range(B_SIZE-1):
             self.robot_to_id[n] = self.model.body_name2id(f's{n}')
-            robot_to_cmd[n] = Queue(100)
+            self.robots.append(Sphero((n // LOGIC_LEN, n % LOGIC_LEN), self.robot_to_id[n], self.model, self.sim))
 
         self.running = True
+        self.path_queue = Queue(400)
+        self.running_sphero = None
 
     def run(self):
         while self.running:
             self.t += 1
             new_coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
-            for robot, cmdq in robot_to_cmd.items():
-                if not cmdq.empty():
-                    cmd = cmdq.peek()
-                    if cmd[0] <= -CMD_COOLDOWN:
-                        cmdq.get()
-                    elif cmd[0] <= 0:
-                        self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.zeros_like(
-                            self.sim.data.xfrc_applied[self.robot_to_id[robot]])
-                    else:
-                        self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.array(cmd[1:])
-                    cmd[0] -= 1
-                    break
-                else:
-                    self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.zeros_like(
-                        self.sim.data.xfrc_applied[self.robot_to_id[robot]])
-                rx, ry, _ = self.sim.data.body_xpos[self.robot_to_id[robot]]
+            # run robot path following
+            if self.running_sphero:
+                if self.running_sphero.followPath():
+                    self.running_sphero = None
+            else:
+                if not self.path_queue.empty():
+                    pathcolor = self.path_queue.get()
+                    path =  pathcolor[0]
+                    color = pathcolor[1]
+                    cy, cx = path[0]
+                    assert self.coord_to_robot[cy][cx] != -1, f"no robot at position {cx} {cy}"
+                    sphere = self.robots[int(self.coord_to_robot[cy][cx])-1]
+                    sphere.setColor(color)
+                    self.running_sphero = sphere
+                    for xy in path:
+                        self.running_sphero.cmd_queue.put(xy)
+            # center the robots and get their true positions
+            for robot in self.robots:
+                robot.center()
+                rx, ry, _ = robot.getPos()
                 x, y = round((ROBOT_RAD+rx+REAL_LEN/2) / CELL_LEN ), round((ROBOT_RAD+ry+REAL_LEN/2)/CELL_LEN)
                 try:
-                    new_coord_to_robot[y][x] = robot
-                except:
-                    print(f"error, robot out of bounds: {robot}, {x}, {y}")
+                    new_coord_to_robot[y][x] = robot.robot_id
+                except Exception as e:
+                    print(f"[error] {robot.robot_id}:  {e}, {e.__traceback__}")
             # reset robot coordinates
             old_coord_to_robot = self.coord_to_robot
             if not np.array_equal(old_coord_to_robot, new_coord_to_robot):
@@ -133,26 +213,26 @@ class VirtualGoBoardMQTT:
         print(occupied.sum())
         self.client.publish("/gomap", occupied.tobytes())
 
-    def moveStone(self, path, color):
-        # check that the robot is present at the start of the path
-        cx, cy = path[0]
-        assert self.coord_to_robot[(cx, cy)] != -1, f"no robot at position {cx} {cy}"
-        robot = self.coord_to_robot[(cx, cy)]
-        # set robot color if moving to a board
-        if color == 1:
-            self.model.geom_rgba[self.robot_to_id[robot]-1] = (1, 1, 1, 1)
-        elif color == -1:
-            self.model.geom_rgba[self.robot_to_id[robot]-1] = (0, 0, 0, 1)
-        else:
-            self.model.geom_rgba[self.robot_to_id[robot]-1] = (0.5, 0.5, 0.5, 0.75)
-        while len(path)>1:
-            path = path[1:]
-            # next position
-            nx, ny = path[0]
-            assert self.coord_to_robot[(nx, ny)] == -1, f"position {nx} {ny} is occupied"
-            action = (nx - cx, ny - cy)
-            robot_to_cmd[robot].put(np.array(action_to_force[action]))
-            cx, cy = nx, ny
+    # def moveStone(self, path, color):
+    #     # check that the robot is present at the start of the path
+    #     cx, cy = path[0]
+    #     assert self.coord_to_robot[(cx, cy)] != -1, f"no robot at position {cx} {cy}"
+    #     robot = self.coord_to_robot[(cx, cy)]
+    #     # set robot color if moving to a board
+    #     if color == 1:
+    #         self.model.geom_rgba[self.robot_to_id[robot]-1] = (1, 1, 1, 1)
+    #     elif color == -1:
+    #         self.model.geom_rgba[self.robot_to_id[robot]-1] = (0, 0, 0, 1)
+    #     else:
+    #         self.model.geom_rgba[self.robot_to_id[robot]-1] = (0.5, 0.5, 0.5, 0.75)
+    #     while len(path)>1:
+    #         path = path[1:]
+    #         # next position
+    #         nx, ny = path[0]
+    #         assert self.coord_to_robot[(nx, ny)] == -1, f"position {nx} {ny} is occupied"
+    #         action = (nx - cx, ny - cy)
+    #         robot_to_cmd[robot].put(np.array(action_to_force[action]))
+    #         cx, cy = nx, ny
 
     def handleMove(self, cli, _, tm):
         global robot_to_cmd
@@ -169,7 +249,8 @@ class VirtualGoBoardMQTT:
             coords = []
             for i in range(len(message)//2):
                 coords.append((message[i*2+1], message[i*2+1+1]))
-            self.moveStone(coords, color)
+            # self.moveStone
+            self.path_queue.put((coords, color))
 
 
 if __name__ == "__main__":
