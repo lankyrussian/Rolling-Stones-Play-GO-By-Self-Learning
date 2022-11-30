@@ -11,7 +11,6 @@ PathFinder::PathFinder()
 		std::cout << "Failed to create an mqtt instance";
 		return;
 	}
-	InitializeAndExpand();
 	InitializeMqtt();
 }
 
@@ -50,30 +49,47 @@ void PathFinder::OnConnect(struct mosquitto *msqt, void *obj, int reason)
 	std::cout << "Connected to broker. Reason:" << mosquitto_reason_string(reason) << std::endl;
 	mosquitto_subscribe(pfPtr->_mqtt, NULL, "/gomove", 2);
 	std::cout << "Subscribed to /gomove" << std::endl;
-}
+	mosquitto_subscribe(pfPtr->_mqtt, NULL, "/gomap", 2);
+	std::cout << "Subscribed to /gomap" << std::endl;
+
+}	
 
 void PathFinder::OnMessage(struct mosquitto * msqt, void * obj, const struct mosquitto_message * msg)
 {
 	PathFinder* pfPtr = static_cast<PathFinder *>(obj);
 	std::cout << "Message received on topic:" << msg->topic << std::endl;
-
-	if (msg->payloadlen != 8)
-	{
-		std::cout << "Message length is invalid, expected 8bytes(2 ints), recieved " << msg->payloadlen << "bytes.";
-		return;
-	}
-	else
-	{
-		int* msgArr = static_cast<int*>(msg->payload);
-		if (msgArr[1] != 0)
+	if ((std::string)msg->topic == "/gomove")
+	{ 
+		if (msg->payloadlen != 8)
 		{
-			pfPtr->PutNewStone(msgArr[0], msgArr[1]);
+			std::cout << "Message length is invalid, expected 8bytes(2 ints), recieved " << msg->payloadlen << "bytes.";
+			return;
 		}
 		else
 		{
-			pfPtr->RemoveStone(msgArr[0]);
+			int* msgArr = static_cast<int*>(msg->payload);
+			if (msgArr[1] != 0)
+			{
+				pfPtr->PutNewStone(msgArr[0], msgArr[1]);
+			}
+			else
+			{
+				pfPtr->RemoveStone(msgArr[0]);
 
+			}
 		}
+	}
+	else if ((std::string)msg->topic == "/gomap")
+	{
+		if (msg->payloadlen != 900)
+		{
+			std::cout << "Message length is invalid, expected 900bytes(15x15 ints), recieved " << msg->payloadlen << "bytes.";
+			return;
+		}
+		int* msgArr = static_cast<int*>(msg->payload);
+		pfPtr->mapInitialized = true;
+		pfPtr->InitializeAndExpand(msgArr, msg->payloadlen);
+
 	}
 }
 
@@ -83,33 +99,77 @@ void PathFinder::OnPublish(struct mosquitto *msqt, void *obj, int mid)
 }
 
 
-void PathFinder::InitializeAndExpand()
+void PathFinder::InitializeAndExpand(int* map, int len)
 {
 	//initialize or subscribe to map 
 
-	astarObj.setWorldSize({ 13,13 });
+	astarObj.setWorldSize({ 15,15 });
 	astarObj.setDiagonalMovement(false);
 
-	std::vector<int> tempVect((rowSize*columnSize), 0);
-	expandedMap = tempVect;
+	//init internal data struct
+	for (int i = 0; i < len; i++)
+	{
+		expandedMap.push_back(map[i]);
+	}
+
+	//init astar map
+	for (int i = 0; i < expandedMap.size(); i++)
+	{
+		int num = expandedMap.at(i);
+		if (num == 0)
+		{
+			int column = (i % 15);
+			int row = (i - column) / 15;
+			astarObj.addCollision({ row, column - 1 });
+		}
+	}
+
 }
 
 void PathFinder::PutNewStone(int newIndex, int playerColor)
 {
-	if (newIndex > 24)
+	if (newIndex > 24 || mapInitialized == false)
 		return;
 
 	int rowCount = newIndex / 5;
-	int expandedIndex = 28 + (newIndex * 2) + (rowCount * 16);
+	int expandedIndex = 45 + (newIndex * 2) + (rowCount * 20);
 
-	int column = (expandedIndex % 13);
-	int row = (expandedIndex - column) / 13;
+	int column = (expandedIndex % 15);
+	int row = (expandedIndex - column) / 15;
 
-	expandedMap.at((row*13) + column) = playerColor;
+	expandedMap.at((row*15) + column) = playerColor;
 
-	std::vector<AStar::Vec2i> path = astarObj.findPath({ row, column }, { 0,0 });
+	std::vector<int> availableStonesIndex;
+	for(int i = 0; i < expandedMap.size(); i++)
+	{
+		int rowCount = i / 15;
+		if (rowCount > 2)
+		{
+			int currentIndex = i - (rowCount * 15);
+			if (currentIndex < 2 || currentIndex > 11)
+			{
+				if (expandedMap.at(i) == 1)
+					availableStonesIndex.push_back(i);
+			}
+		}
+		if (expandedMap.at(i) == 1)
+			availableStonesIndex.push_back(i);
+	}
+
+	std::vector<AStar::Vec2i> path;
+	int PathWeight = INT8_MAX;
+	for(int i = 0; i < availableStonesIndex.size(); i++)
+	{	
+		int tempColumn = (availableStonesIndex.at(i) % 15);
+		int tempRow = (availableStonesIndex.at(i) - column) / 15;
+		std::vector<AStar::Vec2i> tempPath = astarObj.findPath({ row, column }, { tempRow,tempColumn });
+		if (tempPath.size() < PathWeight)
+			path = tempPath;
+
+	}
 
 	pathCooridnates.clear();
+	pathCooridnates.push_back(playerColor);
 	for (auto& coordinate : path)
 	{
 		pathCooridnates.push_back(coordinate.x);
@@ -119,11 +179,11 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 	std::cout << "Adding Stone: " << std::endl;
 	for (int i = 0; i < pathCooridnates.size(); i++)
 	{
-		std::cout << pathCooridnates.at(i);
+		std::cout << pathCooridnates.at(i) << ' ';
 		if ((i+1) % 2 == 0)
 			std::cout << std::endl;
 	}
-
+	
 	int rc = mosquitto_publish(_mqtt, NULL, "/gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
 	if(rc != MOSQ_ERR_SUCCESS){
 		std::cout << "Error publishing: " << mosquitto_strerror(rc) << std::endl;
@@ -136,22 +196,25 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 
 void PathFinder::RemoveStone(int index)
 {
+	if (mapInitialized == false)
+		return;
+	
+	
 	int rowCount = index / 5;
-	int expandedIndex = 28 + (index * 2) + (rowCount * 16);
+	int expandedIndex = 45 + (index * 2) + (rowCount * 20);
+
+	int column = (expandedIndex % 15);
+	int row = (expandedIndex - column) / 15;
 
 	int deadRow, deadColumn;
-
-	int column = (expandedIndex % 13);
-	int row = (expandedIndex - column) / 13;
-
 	std::vector<AStar::Vec2i> path;
 
 	for (int i = 2; i < expandedMap.size(); i++)
 	{
 		if (expandedMap.at(i) == 0)
 		{
-			deadColumn = (i % 13);
-			deadRow = (i - deadColumn) / 13;
+			deadColumn = (i % 15);
+			deadRow = (i - deadColumn) / 15;
 			astarObj.removeCollision({ row, column }); //need to tell astar there's no collision where it's located
 
 			path = astarObj.findPath( {deadRow, deadColumn}, { row, column });

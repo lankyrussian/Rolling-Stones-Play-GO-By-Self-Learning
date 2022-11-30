@@ -14,15 +14,16 @@ public:
 	static void OnPublish(struct mosquitto *msqt, void *obj, int mid);
 
 
-	void InitializeAndExpand();
+	void InitializeAndExpand(int* map, int len);
 	void PutNewStone(int newIndex, int playerColor);
 	void RemoveStone(int index);
 	void InitializeMqtt();
 	void MqttLoop();
 
 private:
-	const int rowSize = 13;
-	const int columnSize = 13;
+	const int rowSize = 15;
+	const int columnSize = 15;
+	bool mapInitialized = false;
 	int map[25];
 	std::vector<int> expandedMap;
 	AStar::Generator astarObj;
