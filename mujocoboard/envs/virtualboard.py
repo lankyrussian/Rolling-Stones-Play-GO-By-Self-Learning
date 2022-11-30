@@ -32,7 +32,7 @@ cell_len = 0.34
 b_len = 5
 board_size = b_len**2
 x_b, y_b = 3, 3
-real_len = b_len * 2 + x_b*2
+real_len = b_len * 2-1 + x_b*2
 # how many steps the command applies external force
 CMD_DURATION = 5
 n_robots = int(b_len**2)
@@ -51,7 +51,7 @@ def build_env(sphero_poss, field_size, colors=None):
     for si, pos in enumerate(sphero_poss):
         rgba = " ".join([str(i) for i in colors[si]]) if colors else "0.5 0.5 0.5 0.75"
         sphero_str = f"""
-    <body name="s{si}" pos="{pos[0]} {pos[1]} 0.4">
+    <body name="s{si}" pos="{pos[0]} {pos[1]} 0.3">
         <joint type="free" stiffness="0" damping="0" frictionloss="0.1" armature="0"/>
         <geom mass="1.0" friction="1 1 1" pos="0 0 0" rgba="{rgba}" size="0.15" type="sphere"/>
     </body>"""

@@ -11,71 +11,136 @@ import math
 import os
 import numpy as np
 import paho.mqtt.client as mqtt
+from queue import Queue
 
-client = mqtt.Client()
+
 # n time steps to apply force, x-force, y-force, z-force, x-torque, y-torque, z-torque
 robot_to_cmd = {}
+CELL_LEN = 0.34
+B_LEN = 5
+B_SIZE = B_LEN ** 2
+XB, YB = 3, 3
+LOGIC_LEN = B_LEN * 2-1 + XB * 2
+REAL_LEN = LOGIC_LEN * CELL_LEN
 # how many steps the command applies external force
 CMD_DURATION = 5
 action_to_force = {
-    0: [CMD_DURATION,0,0,0,5,0,0],
-    1: [CMD_DURATION,0,0,0,0,5,0],
-    2: [CMD_DURATION,0,0,0,-5,0,0],
-    3: [CMD_DURATION,0,0,0,0,-5,0],
+    (0,1): [CMD_DURATION,0,0,0,5,0,0],
+    (0,-1): [CMD_DURATION,0,0,0,0,5,0],
+    (1,0): [CMD_DURATION,0,0,0,-5,0,0],
+    (-1,0): [CMD_DURATION,0,0,0,0,-5,0],
 }
-# path level coordinate to robot
-coord_to_robot = {}
-N_ROBOTS = 24
-cell_len = 0.34
 
-def handleMove(cli, _, tm):
-    global robot_to_cmd
-    topic = tm.topic
-    cmd = topic.split("/")
-    if cmd[1] == "robotmove":
-        message = tm.payload.decode("utf-8")
-        robot_to_cmd[cmd[-1]] = [int(x) for x in message.split(',')]
-    elif cmd[1] == "gopath":
-        message = []
-        for i in range(len(tm.payload)//4):
-            tempBytes = tm.payload[(i*4):((i*4)+4)]
-            message.append(int.from_bytes(tempBytes, "little"))
+N_ROBOTS = B_SIZE-1
 
-client.on_message = handleMove
-client.connect("localhost", 1883)
-client.subscribe("/robotmove/#")
-client.subscribe("/gopath")
-client.loop_start()
 
-MODEL_XML = "board.xml"
+class VirtualGoBoardMQTT:
+    def __init__(self):
+        client = mqtt.Client()
+        client.on_message = self.handleMove
+        client.connect("localhost", 1883)
+        client.subscribe("/robotmove/#")
+        client.subscribe("/gopath")
+        client.loop_start()
+        self.client = client
 
-model = load_model_from_path(MODEL_XML)
-sim = MjSim(model)
-viewer = MjViewer(sim)
-t = 0
+        MODEL_XML = "board.xml"
 
-robot_to_id = {}
-for n in range(N_ROBOTS):
-    robot_to_id[n] = model.body_name2id(n)
-    robot_to_cmd[n] = [0, 0, 0, 0, 0, 0, 0]
-    rx, ry, _ = sim.data.body_xpos[robot_to_id[n]]
-    x, y = int(rx/cell_len), int(ry/cell_len)
-    coord_to_robot = np.zeros((5,5))
-    coord_to_robot[y][x] = n
+        self.model = load_model_from_path(MODEL_XML)
+        self.sim = MjSim(self.model)
+        self.viewer = MjViewer(self.sim)
+        self.t = 0
+        # path level coordinate to robot
+        self.coord_to_robot = {}
 
-while True:
-    t += 1
-    for robot, cmd in robot_to_cmd.items():
-        if cmd[0] > 0:
-            cmd[0] -= 1
-            sim.data.xfrc_applied[robot_to_id[robot]] = np.array(cmd[1:])
+        self.robot_to_id = {}
+        for n in range(N_ROBOTS):
+            self.robot_to_id[n] = self.model.body_name2id(f's{n}')
+            robot_to_cmd[n] = Queue()
+            rx, ry, _ = self.sim.data.body_xpos[self.robot_to_id[n]]
+            x, y = int((rx / CELL_LEN) - LOGIC_LEN / 2), int((ry / CELL_LEN) - LOGIC_LEN / 2)
+            self.coord_to_robot = np.zeros((LOGIC_LEN, LOGIC_LEN))
+            self.coord_to_robot[y][x] = n
+
+        self.running = True
+
+    def run(self):
+        while self.running:
+            self.t += 1
+            # reset robot coordinates
+            old_coord_to_robot = self.coord_to_robot
+            self.coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
+            for robot, cmdq in robot_to_cmd.items():
+                if not cmdq.empty():
+                    cmd = cmdq.peek()
+                    if cmd[0] == 0:
+                        cmdq.get()
+                    else:
+                        cmd[0] -= 1
+                    self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.array(cmd[1:])
+                else:
+                    self.sim.data.xfrc_applied[self.robot_to_id[robot]] = np.zeros_like(
+                        self.sim.data.xfrc_applied[self.robot_to_id[robot]])
+                rx, ry, _ = self.sim.data.body_xpos[self.robot_to_id[robot]]
+                x, y = int((rx / CELL_LEN) - LOGIC_LEN / 2), int((ry / CELL_LEN) - LOGIC_LEN / 2)
+                try:
+                    self.coord_to_robot[y][x] = robot
+                except:
+                    print(f"error, robot out of bounds: {robot}, {x}, {y}")
+            if not np.array_equal(old_coord_to_robot, self.coord_to_robot):
+                print(self.coord_to_robot)
+                self.sendUpdatedMap(self.coord_to_robot)
+
+            self.sim.step()
+            self.viewer.render()
+            if self.t > 100 and os.getenv('TESTING') is not None:
+                break
+
+    def sendUpdatedMap(self, map):
+        occupied = (map != -1).astype(int)
+        self.client.publish("/gomap", occupied.tobytes())
+
+    def moveStone(self, path, color):
+        # set robot color if moving to a board
+        if color == 1:
+            self.model.geom_rgba[color] = (1, 1, 1, 1)
+        elif color == -1:
+            self.model.geom_rgba[color] = (0, 0, 0, 1)
         else:
-            sim.data.xfrc_applied[robot_to_id[robot]] = np.zeros_like(sim.data.xfrc_applied[robot_to_id[robot]])
-        rx, ry, _ = sim.data.body_xpos[robot_to_id[robot]]
-        x, y = int(rx / cell_len), int(ry / cell_len)
-        coord_to_robot = np.zeros((5, 5))
-        coord_to_robot[y][x] = robot
-    sim.step()
-    viewer.render()
-    if t > 100 and os.getenv('TESTING') is not None:
-        break
+            self.model.geom_rgba[color] = (0.5, 0.5, 0.5, 0.75)
+        # check that the robot is present at the start of the path
+        cx, cy = path[0]
+        assert self.coord_to_robot[(cx, cy)] != -1, f"no robot at position {cx} {cy}"
+        while len(path>1):
+            # current position
+            cx, cy = path[0]
+            # next position
+            nx, ny = path[1]
+            assert self.coord_to_robot[(nx, ny)] == -1, f"position {nx} {ny} is occupied"
+            action = (nx - cx, ny - cy)
+            robot = self.coord_to_robot[(cx, cy)]
+            robot_to_cmd[robot].put(np.array(action_to_force[action]))
+            path = path[1:]
+
+    def handleMove(self, cli, _, tm):
+        global robot_to_cmd
+        topic = tm.topic
+        cmd = topic.split("/")
+        if cmd[1] == "robotmove":
+            message = tm.payload.decode("utf-8")
+            robot_to_cmd[cmd[-1]] = [int(x) for x in message.split(',')]
+        elif cmd[1] == "gopath":
+            message = []
+            for i in range(len(tm.payload)//4):
+                tempBytes = tm.payload[(i*4):((i*4)+4)]
+                message.append(int.from_bytes(tempBytes, "little"))
+            color = message[0]
+            coords = []
+            for i in range(len(message)//2):
+                coords.append((message[i*2+1], message[i*2+1+1]))
+            self.moveStone(coords, color)
+
+
+if __name__ == "__main__":
+    vgb = VirtualGoBoardMQTT()
+    vgb.run()

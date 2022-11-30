@@ -14,7 +14,7 @@ def make_random_env(n_on_board=13):
     colors = []
     # stones that are outside
     out_idx = (0, 0)
-    for i in range(board_size - n_on_board):
+    for i in range(1, board_size - n_on_board+1):
         x = out_idx[0]
         y = out_idx[1]
         # randomly assign color
