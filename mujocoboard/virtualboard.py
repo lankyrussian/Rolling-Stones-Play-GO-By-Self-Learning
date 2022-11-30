@@ -97,7 +97,7 @@ class VirtualGoBoardMQTT:
                 break
 
     def sendUpdatedMap(self, map):
-        occupied = (map != -1).astype(int)
+        occupied = (map != -1).astype(np.int32)
         self.client.publish("/gomap", occupied.tobytes())
 
     def moveStone(self, path, color):
