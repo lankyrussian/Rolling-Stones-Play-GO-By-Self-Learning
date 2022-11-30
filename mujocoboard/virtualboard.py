@@ -15,6 +15,19 @@ import paho.mqtt.client as mqtt
 client = mqtt.Client()
 # n time steps to apply force, x-force, y-force, z-force, x-torque, y-torque, z-torque
 robot_to_cmd = {}
+# how many steps the command applies external force
+CMD_DURATION = 5
+action_to_force = {
+    0: [CMD_DURATION,0,0,0,5,0,0],
+    1: [CMD_DURATION,0,0,0,0,5,0],
+    2: [CMD_DURATION,0,0,0,-5,0,0],
+    3: [CMD_DURATION,0,0,0,0,-5,0],
+}
+# path level coordinate to robot
+coord_to_robot = {}
+N_ROBOTS = 24
+cell_len = 0.34
+
 def handleMove(cli, _, tm):
     global robot_to_cmd
     topic = tm.topic
@@ -27,8 +40,7 @@ def handleMove(cli, _, tm):
         for i in range(len(tm.payload)//4):
             tempBytes = tm.payload[(i*4):((i*4)+4)]
             message.append(int.from_bytes(tempBytes, "little"))
-        print(message)
-    print(robot_to_cmd)
+
 client.on_message = handleMove
 client.connect("localhost", 1883)
 client.subscribe("/robotmove/#")
@@ -43,9 +55,13 @@ viewer = MjViewer(sim)
 t = 0
 
 robot_to_id = {}
-for n in range(1, 9):
-    robot_to_id[f's{n}'] = model.body_name2id(f"s{n}")
-    robot_to_cmd[f's{n}'] = [0, 0, 0, 0, 0, 0, 0]
+for n in range(N_ROBOTS):
+    robot_to_id[n] = model.body_name2id(n)
+    robot_to_cmd[n] = [0, 0, 0, 0, 0, 0, 0]
+    rx, ry, _ = sim.data.body_xpos[robot_to_id[n]]
+    x, y = int(rx/cell_len), int(ry/cell_len)
+    coord_to_robot = np.zeros((5,5))
+    coord_to_robot[y][x] = n
 
 while True:
     t += 1
@@ -55,7 +71,10 @@ while True:
             sim.data.xfrc_applied[robot_to_id[robot]] = np.array(cmd[1:])
         else:
             sim.data.xfrc_applied[robot_to_id[robot]] = np.zeros_like(sim.data.xfrc_applied[robot_to_id[robot]])
-
+        rx, ry, _ = sim.data.body_xpos[robot_to_id[robot]]
+        x, y = int(rx / cell_len), int(ry / cell_len)
+        coord_to_robot = np.zeros((5, 5))
+        coord_to_robot[y][x] = robot
     sim.step()
     viewer.render()
     if t > 100 and os.getenv('TESTING') is not None:
