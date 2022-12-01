@@ -116,11 +116,11 @@ class Sphero:
                 0]
 
     def followPath(self):
+        if not self.centered:
+            return False
         if self.cmd_queue.empty():
             print('finished following path')
             return True
-        if not self.centered:
-            return False
         cmd = self.cmd_queue.get()
         print(f"sphero {self.robot_id} following path, {self.x, self.y} -> {cmd[1], cmd[0]}")
         self.x = cmd[1]
@@ -132,9 +132,9 @@ class Sphero:
     def setColor(self, color):
         self.color = color
         # set robot color if moving to a board
-        if color == 1:
+        if color == -1:
             self.model.geom_rgba[self.robot_id - 1] = (1, 1, 1, 1)
-        elif color == -1:
+        elif color == 1:
             self.model.geom_rgba[self.robot_id - 1] = (0, 0, 0, 1)
         else:
             self.model.geom_rgba[self.robot_id - 1] = (0.5, 0.5, 0.5, 0.75)
@@ -171,6 +171,7 @@ class VirtualGoBoardMQTT:
         self.running_sphero = None
 
     def run(self):
+        initialized_pathplanning = False
         while self.running:
             self.t += 1
             new_coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
@@ -185,6 +186,7 @@ class VirtualGoBoardMQTT:
                     color = pathcolor[1]
                     # starting coordinate
                     cy, cx = path[0]
+                    # if self.coord_to_robot[cy][cx] == -1
                     assert self.coord_to_robot[cy][cx] != -1, f"no robot at position {cx} {cy}"
                     sphere = self.robots[int(self.coord_to_robot[cy][cx])-1]
                     sphere.setColor(color)
@@ -201,12 +203,13 @@ class VirtualGoBoardMQTT:
                     new_coord_to_robot[y][x] = robot.robot_id
                 except Exception as e:
                     print(f"[error] {robot.robot_id}:  {e}, {e.__traceback__}")
-            # reset robot coordinates
+            # update true robot positions
             old_coord_to_robot = self.coord_to_robot
             if not np.array_equal(old_coord_to_robot, new_coord_to_robot):
                 self.coord_to_robot = new_coord_to_robot
-                print(self.coord_to_robot)
-                self.sendUpdatedMap(self.coord_to_robot)
+                if not initialized_pathplanning:
+                    self.sendUpdatedMap(self.coord_to_robot)
+                    initialized_pathplanning = True
 
             self.sim.step()
             self.viewer.render()
@@ -250,10 +253,14 @@ class VirtualGoBoardMQTT:
             message = []
             for i in range(len(tm.payload)//4):
                 message.append(struct.unpack('i', tm.payload[i*4:(i+1)*4])[0])
-            color = message[0]
+            if len(message) % 2 != 0:
+                color = message[0]
+                message = message[1:]
+            else:
+                color = 0
             coords = []
             for i in range(len(message)//2):
-                coords.append((message[i*2+1], message[i*2+1+1]))
+                coords.append((message[i*2], message[i*2+1]))
             # self.moveStone
             self.path_queue.put((coords, color))
 

@@ -132,6 +132,8 @@ void PathFinder::InitializeAndExpand(int* map, int len)
 
 void PathFinder::PutNewStone(int newIndex, int playerColor)
 {
+		std::cout << "newindex: " << newIndex << std::endl;
+
 	if (newIndex > 24 || mapInitialized == false)
 		return;
 
@@ -167,6 +169,7 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 
 	std::vector<AStar::Vec2i> path;
 	int PathWeight = INT32_MAX;
+	int startx, starty;
 	for(int i = 0; i < availableStonesIndex.size(); i++)
 	{	
 		int tempColumn = (availableStonesIndex.at(i) % 15);
@@ -185,6 +188,8 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 			{
 				path = tempPath;
 				PathWeight = tempPath.size();
+				startx = tempRow;
+				starty = tempColumn;
 			}
 		}
 
@@ -212,9 +217,12 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 	}
 
 	//after completion
+	// new stone is added to map
 	astarObj.addCollision({ row, column });
 	expandedMap.at((row*15) + column) = 1;
-
+    // remove stone's old position from the map
+	astarObj.removeCollision({ startx, starty });
+	expandedMap.at((startx*15) + starty) = 0;
 }
 
 void PathFinder::RemoveStone(int index)

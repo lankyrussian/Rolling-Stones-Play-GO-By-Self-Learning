@@ -21,7 +21,7 @@ MODEL_XML = """<?xml version="1.0" ?>
         <camera euler="0 0 0" fovy="40" name="rgb" pos="0 0 2.5"></camera>
         SPHEROS_
         <body name="floor" pos="FLOOR_ 0.025">
-            <geom condim="3" size="FLOORSIZE_ 0.02" rgba="0.8 0.8 0.8 0.5" type="box"/>
+            <geom condim="3" size="FLOORSIZE_ 0.02" rgba="0.8 0.8 0.8 0.2" type="box"/>
         </body>
         LINES_
     </worldbody>
