@@ -119,10 +119,8 @@ class Sphero:
         if not self.centered:
             return False
         if self.cmd_queue.empty():
-            print('finished following path')
             return True
         cmd = self.cmd_queue.get()
-        print(f"sphero {self.robot_id} following path, {self.x, self.y} -> {cmd[1], cmd[0]}")
         self.x = cmd[1]
         self.y = cmd[0]
         self.x = np.clip(self.x, 0, LOGIC_LEN-1)
@@ -179,6 +177,9 @@ class VirtualGoBoardMQTT:
             if self.running_sphero:
                 if self.running_sphero.followPath():
                     self.running_sphero = None
+                    # notify the go board that the move is finished
+                    # so the next move can be executed
+                    self.client.publish("/boardmovedone", "", qos=2)
             else:
                 if not self.path_queue.empty():
                     pathcolor = self.path_queue.get()
@@ -191,7 +192,6 @@ class VirtualGoBoardMQTT:
                     sphere = self.robots[int(self.coord_to_robot[cy][cx])-1]
                     sphere.setColor(color)
                     self.running_sphero = sphere
-                    print(f"robot {sphere.robot_id} started following path")
                     for xy in path:
                         self.running_sphero.cmd_queue.put(xy)
             # center the robots and get their true positions
@@ -218,38 +218,12 @@ class VirtualGoBoardMQTT:
 
     def sendUpdatedMap(self, map):
         occupied = (map != -1).astype(np.int32)
-        print(occupied.sum())
         self.client.publish("/gomap", occupied.tobytes())
 
-    # def moveStone(self, path, color):
-    #     # check that the robot is present at the start of the path
-    #     cx, cy = path[0]
-    #     assert self.coord_to_robot[(cx, cy)] != -1, f"no robot at position {cx} {cy}"
-    #     robot = self.coord_to_robot[(cx, cy)]
-    #     # set robot color if moving to a board
-    #     if color == 1:
-    #         self.model.geom_rgba[self.robot_to_id[robot]-1] = (1, 1, 1, 1)
-    #     elif color == -1:
-    #         self.model.geom_rgba[self.robot_to_id[robot]-1] = (0, 0, 0, 1)
-    #     else:
-    #         self.model.geom_rgba[self.robot_to_id[robot]-1] = (0.5, 0.5, 0.5, 0.75)
-    #     while len(path)>1:
-    #         path = path[1:]
-    #         # next position
-    #         nx, ny = path[0]
-    #         assert self.coord_to_robot[(nx, ny)] == -1, f"position {nx} {ny} is occupied"
-    #         action = (nx - cx, ny - cy)
-    #         robot_to_cmd[robot].put(np.array(action_to_force[action]))
-    #         cx, cy = nx, ny
-
     def handleMove(self, cli, _, tm):
-        global robot_to_cmd
         topic = tm.topic
         cmd = topic.split("/")
-        if cmd[1] == "robotmove":
-            message = tm.payload.decode("utf-8")
-            robot_to_cmd[cmd[-1]] = [int(x) for x in message.split(',')]
-        elif cmd[1] == "gopath":
+        if cmd[1] == "gopath":
             message = []
             for i in range(len(tm.payload)//4):
                 message.append(struct.unpack('i', tm.payload[i*4:(i+1)*4])[0])
@@ -261,7 +235,6 @@ class VirtualGoBoardMQTT:
             coords = []
             for i in range(len(message)//2):
                 coords.append((message[i*2], message[i*2+1]))
-            # self.moveStone
             self.path_queue.put((coords, color))
 
 
