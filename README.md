@@ -6,31 +6,41 @@ go game engine implementation of the interface from [alpha-zero-general](https:/
 current features:
 * play go against a random agent
 * send mqtt commands about stone placement to pathfinding
+* train AlphaZero
+* play against AlphaZero
 
-### Setup
+### setup
 
+If using Nvidia GPU:   
 [install conda for linux](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)   
 `conda create --name rlpg --file env.txt`
 
-### Play against a random agent
+### run
+`python src/playgo.py` - against latest trained agent in ./src/pretrained/    
+`python src/playgo.py --player2 r` - against random agent   
+`python src/playgo.py --player2 h` - against another player   
 
-`python src/playgo.py`
-
-### Test
+### test
  
 `python -m unittest test/GoGameTests.py`
 
 ## pathfinding
 
 A* pathfinding for the expanded go grid. The logical grid is expanded to include a
-unit of space between all robots for simpler pathfinding.
+unit of space between all robots for simpler pathfinding.    
 Features:
 * A* pathfinding for putting new stones on the board, and removing stones from the board
+* reads the initial board state published by the mujocoboard
+* publishes path commands to the mujocoboard 
 
 ### setup
 install mosquitto:    
 `sudo apt-get install libmosquitto-dev mosquitto-dev`    
 `cd pathplanning ; make`
+
+### run   
+`./PathPlanner`   
+Run this before starting the virtual board
 
 ## mujocoboard
 
@@ -38,15 +48,15 @@ virtual board to simulate sphero movement on path commands
 
 ### setup
 
-[Install Mujoco](https://blog.guptanitish.com/blog/install-mujoco/). 
-If using conda, make a soft link from the local /usr/lib/x86_64-linux-gnu/libstdc++.so.6 to 
+[Install Mujoco](https://blog.guptanitish.com/blog/install-mujoco/).   
+If using conda, make a soft link from the local `/usr/lib/x86_64-linux-gnu/libstdc++.so.6` to
 the corresponding file in your conda env.
 
 make sure the LD_PRELOAD env variable is setup to render mujoco:     
 `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so`
 
 ### run
-make a go virtual board environment xml with a random stone placement:    
+make a go virtual board environment xml with a initial stone placement:    
 `python make_env.py`   
 
 run the mujoco simulation using board.xml:    
@@ -55,5 +65,3 @@ run the mujoco simulation using board.xml:
 ### Using Repositories
 
 [alpha-zero-general](https://github.com/suragnair/alpha-zero-general)   
-[sphero_formation (0ac14aad3)](https://github.com/mkrizmancic/sphero_formation)
-[sphero_ros](github.com:mmwise/sphero_ros)
