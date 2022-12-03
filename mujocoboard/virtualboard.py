@@ -159,7 +159,6 @@ class VirtualGoBoardMQTT:
         self.client = client
 
         self.MODEL_XML = "board.xml"
-        self.sim_thread = None
 
         self.model = None
         self.sim = None
@@ -174,8 +173,6 @@ class VirtualGoBoardMQTT:
         self.running = None
 
     def start(self):
-        if self.sim_thread:
-            self.sim_thread.join()
         self.model = load_model_from_path(self.MODEL_XML)
         self.sim = MjSim(self.model)
         self.viewer = MjViewer(self.sim)
@@ -189,8 +186,7 @@ class VirtualGoBoardMQTT:
             self.robots.append(Sphero((n // LOGIC_LEN, n % LOGIC_LEN), self.robot_to_id[n], self.model, self.sim))
         self.initialized = False
         self.running = True
-        self.sim_thread = threading.Thread(target=self.run)
-        self.sim_thread.start()
+        self.run()
 
     def run(self):
         # indicate that the board is ready
