@@ -108,8 +108,8 @@ class Sphero:
             # get the direction to target
             dir_x = (target_x - pos[0])
             dir_y = (target_y - pos[1])
-            torque_x = np.clip(10*dir_x - 1.5* vel[0] - self.vel_integ[0], -4, 4)
-            torque_y = np.clip(10*dir_y - 1.5* vel[1] - self.vel_integ[1], -4, 4)
+            torque_x = np.clip(10*dir_x - 1.5* vel[0] - self.vel_integ[0], -3, 3)
+            torque_y = np.clip(10*dir_y - 1.5* vel[1] - self.vel_integ[1], -3, 3)
             # apply the force
             self.sim.data.xfrc_applied[self.robot_id] = [
                 0, 0, 0,
