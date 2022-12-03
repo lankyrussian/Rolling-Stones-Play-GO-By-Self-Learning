@@ -7,10 +7,10 @@ be pushed around with the robot. There's also a box without joints. Since
 the box doesn't have joints, it's fixed and can't be pushed around.
 """
 import struct
+import threading
 
 from mujoco_py import load_model_from_path, MjSim, MjViewer
 import math
-import os
 import numpy as np
 import paho.mqtt.client as mqtt
 
@@ -31,6 +31,7 @@ action_to_force = {
     (1,0):  [5,0,0,0,-F, 0,0],
     (-1,0): [5,0,0,0, F, 0,0],
 }
+
 
 class Queue:
     def __init__(self, size):
@@ -123,6 +124,15 @@ class Sphero:
         cmd = self.cmd_queue.get()
         self.x = cmd[1]
         self.y = cmd[0]
+        # # roll several steps if coordinates are on the same line
+        # while not self.cmd_queue.empty():
+        #     next_cmd = self.cmd_queue.peek()
+        #     if cm:
+        #         self.cmd_queue.get()
+        #         self.x = cmd[1]
+        #         self.y = cmd[0]
+        #     else:
+        #         break
         self.x = np.clip(self.x, 0, LOGIC_LEN-1)
         self.y = np.clip(self.y, 0, LOGIC_LEN-1)
         return False
@@ -143,33 +153,48 @@ class VirtualGoBoardMQTT:
         client = mqtt.Client()
         client.on_message = self.handleMove
         client.connect("localhost", 1883)
-        client.subscribe("/robotmove/#")
         client.subscribe("/gopath")
+        client.subscribe("/reset")
         client.loop_start()
         self.client = client
 
-        MODEL_XML = "board.xml"
+        self.MODEL_XML = "board.xml"
+        self.sim_thread = None
 
-        self.model = load_model_from_path(MODEL_XML)
+        self.model = None
+        self.sim = None
+        self.viewer = None
+        self.t = None
+        self.robots = None
+        self.robot_to_id = None
+        self.coord_to_robot = None
+        self.path_queue = None
+        self.running_sphero = None
+        self.initialized = False
+        self.running = None
+
+    def start(self):
+        if self.sim_thread:
+            self.sim_thread.join()
+        self.model = load_model_from_path(self.MODEL_XML)
         self.sim = MjSim(self.model)
         self.viewer = MjViewer(self.sim)
         self.t = 0
-        # path level coordinate to robot
-        self.coord_to_robot = {}
+        self.running_sphero = None
+        self.path_queue = Queue(400)
         self.robots = []
-
         self.robot_to_id = {}
-        self.coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
         for n in range(B_SIZE-1):
             self.robot_to_id[n] = self.model.body_name2id(f's{n}')
             self.robots.append(Sphero((n // LOGIC_LEN, n % LOGIC_LEN), self.robot_to_id[n], self.model, self.sim))
-
+        self.initialized = False
         self.running = True
-        self.path_queue = Queue(400)
-        self.running_sphero = None
+        self.sim_thread = threading.Thread(target=self.run)
+        self.sim_thread.start()
 
     def run(self):
-        initialized_pathplanning = False
+        # indicate that the board is ready
+        self.client.publish("/boardmovedone", "", qos=2)
         while self.running:
             self.t += 1
             new_coord_to_robot = -np.ones((LOGIC_LEN, LOGIC_LEN))
@@ -179,10 +204,12 @@ class VirtualGoBoardMQTT:
                     self.running_sphero = None
                     # notify the go board that the move is finished
                     # so the next move can be executed
+                    print("waiting for a path...")
                     self.client.publish("/boardmovedone", "", qos=2)
             else:
                 if not self.path_queue.empty():
                     pathcolor = self.path_queue.get()
+                    print("new path ", pathcolor)
                     path =  pathcolor[0]
                     color = pathcolor[1]
                     # starting coordinate
@@ -207,14 +234,12 @@ class VirtualGoBoardMQTT:
             old_coord_to_robot = self.coord_to_robot
             if not np.array_equal(old_coord_to_robot, new_coord_to_robot):
                 self.coord_to_robot = new_coord_to_robot
-                if not initialized_pathplanning:
+                if not self.initialized:
                     self.sendUpdatedMap(self.coord_to_robot)
-                    initialized_pathplanning = True
+                    self.initialized = True
 
             self.sim.step()
             self.viewer.render()
-            if self.t > 100 and os.getenv('TESTING') is not None:
-                break
 
     def sendUpdatedMap(self, map):
         occupied = (map != -1).astype(np.int32)
@@ -236,8 +261,11 @@ class VirtualGoBoardMQTT:
             for i in range(len(message)//2):
                 coords.append((message[i*2], message[i*2+1]))
             self.path_queue.put((coords, color))
+        elif cmd[1] == "reset":
+            self.running = False
 
 
 if __name__ == "__main__":
     vgb = VirtualGoBoardMQTT()
-    vgb.run()
+    while True:
+        vgb.start()

@@ -58,6 +58,7 @@ void PathFinder::OnMessage(struct mosquitto * msqt, void * obj, const struct mos
 {
 	PathFinder* pfPtr = static_cast<PathFinder *>(obj);
 	std::cout << "Message received on topic:" << msg->topic << std::endl;
+	pfPtr->m.lock();
 	if ((std::string)msg->topic == "/gomove")
 	{ 
 		if (msg->payloadlen != 8)
@@ -91,6 +92,7 @@ void PathFinder::OnMessage(struct mosquitto * msqt, void * obj, const struct mos
 		pfPtr->InitializeAndExpand(msgArr, msg->payloadlen / 4);
 
 	}
+	pfPtr->m.unlock();
 }
 
 void PathFinder::OnPublish(struct mosquitto *msqt, void *obj, int mid)
@@ -98,23 +100,33 @@ void PathFinder::OnPublish(struct mosquitto *msqt, void *obj, int mid)
 	std::cout << "Message was published: " << mid << std::endl;
 }
 
+void display(int* map, int length)
+{
+    for (int i = 0; i < length; i++)
+    {
+        std::cout << map[i] << " ";
+        if (i % 15 == 14)
+        {
+            std::cout << std::endl;
+        }
+    }
+}
 
 void PathFinder::InitializeAndExpand(int* map, int len)
 {
 	//initialize or subscribe to map 
 
 	astarObj.setWorldSize({ 15,15 });
-	astarObj.setDiagonalMovement(false);
+	astarObj.clearCollisions();
 
 	//init internal data struct
 	expandedMap.clear();
 	for (int i = 0; i < len; i++)
 	{
 		expandedMap.push_back(map[i]);
-		std::cout << map[i] << ' ';
-		if ((i+1) % 15 == 0)
-			std::cout << std::endl;
 	}
+	// display
+	display(map, len);
 
 	//init astar map
 	for (int i = 0; i < expandedMap.size(); i++)
@@ -124,7 +136,7 @@ void PathFinder::InitializeAndExpand(int* map, int len)
 		{
 			int column = (i % 15);
 			int row = (i - column) / 15;
-			astarObj.addCollision({ row, column - 1 });
+			astarObj.addCollision({ row, column });
 		}
 	}
 
@@ -132,8 +144,6 @@ void PathFinder::InitializeAndExpand(int* map, int len)
 
 void PathFinder::PutNewStone(int newIndex, int playerColor)
 {
-		std::cout << "newindex: " << newIndex << std::endl;
-
 	if (newIndex > 24 || mapInitialized == false)
 		return;
 
@@ -149,31 +159,23 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 	{
 		int currRow = i / 15;
 		int currColumn = i % 15;
+		// can't use stones from the board as new stones
 		if (currRow > 2 && currRow < 12 && currColumn > 2 && currColumn < 12){
            continue;
         }
-//		{
-//			int currentIndex = i - (rowCount * 15);
-//			if (currentIndex < 2 || currentIndex > 11)
-//			{
-//				int var1 = expandedMap.at(i);
-//				if (var1 == 1)
-//					availableStonesIndex.push_back(i);
-//			}
-//		} else {
         int var2 = expandedMap.at(i);
         if (var2 == 1)
             availableStonesIndex.push_back(i);
-//		}
 	}
 
 	std::vector<AStar::Vec2i> path;
 	int PathWeight = INT32_MAX;
-	int startx, starty;
+	int startCol, startRow;
 	for(int i = 0; i < availableStonesIndex.size(); i++)
 	{	
 		int tempColumn = (availableStonesIndex.at(i) % 15);
-		int tempRow = (availableStonesIndex.at(i) - column) / 15;
+		int tempRow = (availableStonesIndex.at(i) - tempColumn) / 15;
+		std::cout << "considering: " << tempRow << " " << tempColumn << std::endl;
 		astarObj.removeCollision({tempRow, tempColumn});
 		std::vector<AStar::Vec2i> tempPath = astarObj.findPath({ tempRow, tempColumn }, { row , column });
 		astarObj.addCollision({tempRow, tempColumn});
@@ -188,12 +190,18 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 			{
 				path = tempPath;
 				PathWeight = tempPath.size();
-				startx = tempRow;
-				starty = tempColumn;
+				startCol = tempColumn;
+				startRow = tempRow;
 			}
 		}
 
 	}
+	if(PathWeight==INT32_MAX)
+    {
+        std::cout << "Error: No path found" << std::endl;
+        display(expandedMap.data(), expandedMap.size());
+        return;
+    }
 
 	pathCooridnates.clear();
 	for (auto& coordinate : path)
@@ -203,17 +211,11 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 	}
 	pathCooridnates.push_back(playerColor);
 	std::reverse(pathCooridnates.begin(), pathCooridnates.end());
-	std::cout << "Adding Stone: " << std::endl;
 	for (int i = 0; i < pathCooridnates.size(); i++)
 	{
 		std::cout << pathCooridnates.at(i) << ' ';
 		if (i % 2 == 0)
 			std::cout << std::endl;
-	}
-	
-	int rc = mosquitto_publish(_mqtt, NULL, "/gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
-	if(rc != MOSQ_ERR_SUCCESS){
-		std::cout << "Error publishing: " << mosquitto_strerror(rc) << std::endl;
 	}
 
 	//after completion
@@ -221,8 +223,13 @@ void PathFinder::PutNewStone(int newIndex, int playerColor)
 	astarObj.addCollision({ row, column });
 	expandedMap.at((row*15) + column) = 1;
     // remove stone's old position from the map
-	astarObj.removeCollision({ startx, starty });
-	expandedMap.at((startx*15) + starty) = 0;
+	astarObj.removeCollision({ startRow, startCol });
+	expandedMap.at((startRow*15) + startCol) = 0;
+
+	int rc = mosquitto_publish(_mqtt, NULL, "/gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
+	if(rc != MOSQ_ERR_SUCCESS){
+		std::cout << "Error publishing: " << mosquitto_strerror(rc) << std::endl;
+	}
 }
 
 void PathFinder::RemoveStone(int index)
@@ -247,6 +254,7 @@ void PathFinder::RemoveStone(int index)
 			deadColumn = (i % 15);
 			deadRow = (i - deadColumn) / 15;
 			astarObj.removeCollision({ row, column }); //need to tell astar there's no collision where it's located
+			expandedMap.at((row*15) + column) = 0;
 
 			path = astarObj.findPath( {deadRow, deadColumn}, { row, column });
 
@@ -273,21 +281,14 @@ void PathFinder::RemoveStone(int index)
 		pathCooridnates.push_back(coordinate.y);
 	}
 
-	std::cout << "Removing Stone: " << std::endl;
-	for (int i = 0; i < pathCooridnates.size(); i++)
-	{
-		std::cout << pathCooridnates.at(i);
-		if ((i + 1) % 2 == 0)
-			std::cout << std::endl;
-	}
+	std::cout << "Removing Stone" << std::endl;
 
-
+    astarObj.addCollision({ deadRow, deadColumn });
+	expandedMap.at((deadRow*15) + deadColumn) = 1;
 	// publish
 	int rc = mosquitto_publish(_mqtt, NULL, "/gopath", (pathCooridnates.size() * sizeof(int) ), pathCooridnates.data(), 2, false);
 	if(rc != MOSQ_ERR_SUCCESS){
 		std::cout << "Error publishing: " << mosquitto_strerror(rc) << std::endl;
 	}
-
-	astarObj.addCollision({ deadRow, deadColumn });
 
 }

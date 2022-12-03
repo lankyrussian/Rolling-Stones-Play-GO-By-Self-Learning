@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "AStar.h"
 #include <mosquitto.h>
+#include <mutex>
 
 class PathFinder
 {
@@ -29,6 +30,7 @@ private:
 	std::vector<int> expandedMap;
 	AStar::Generator astarObj;
 	std::vector<int> pathCooridnates;
+	std::mutex m;
 	struct mosquitto* _mqtt;
 };
 

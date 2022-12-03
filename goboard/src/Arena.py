@@ -2,6 +2,7 @@
 
 import logging
 import struct
+import time
 
 import numpy as np
 import paho.mqtt.client as mqtt
@@ -40,7 +41,7 @@ class ArenaMQTT():
             self.board_move_done = False
 
     def send(self, topic, msg):
-        self.client.publish(topic, msg)
+        self.client.publish(topic, msg, qos=2)
 
     def sendBoardToMQTT(self, board_diff, board_pieces):
         # send stone positions, move/remove, color to pathfinding algorithm
@@ -54,6 +55,9 @@ class ArenaMQTT():
                     color = 1 if board_diff[pos] == 1 else -1
                     msg = struct.pack('ii', idx, color)
                     self.send("/gomove", msg)
+                    while not self.board_move_done:
+                        self.client.loop()
+                    self.board_move_done = False
         # remove stones
         for pos, val in np.ndenumerate(board_diff):
             if val != 0:
@@ -62,9 +66,13 @@ class ArenaMQTT():
                     print(f'sending {idx}')
                     msg = struct.pack('ii', idx, 0)
                     self.send("/gomove", msg)
+                    while not self.board_move_done:
+                        self.client.loop()
+                    self.board_move_done = False
 
     def handleBoardMoveDone(self, client, userdata, msg):
         self.board_move_done = True
+        print("board move done")
 
     def playGame(self, verbose=False):
         """
@@ -76,9 +84,14 @@ class ArenaMQTT():
             or
                 draw result returned from the game that is neither 1, -1, nor 0.
         """
-        self.client.connect(self.broker, self.port)
-        self.client.subscribe("/boardmovedone")
-        self.client.on_message = self.handleBoardMoveDone
+        if self.use_mqtt:
+            self.client.connect(self.broker, self.port)
+            self.client.subscribe("/boardmovedone")
+            self.client.on_message = self.handleBoardMoveDone
+            # wait for the board to be ready
+            while not self.board_move_done:
+                self.client.loop()
+
         players = [self.player2, None, self.player1]
         curPlayer = 1
         board = self.game.getInitBoard()
@@ -103,15 +116,15 @@ class ArenaMQTT():
             if self.use_mqtt:
                 board_diff = new_board.pieces - board.pieces
                 self.sendBoardToMQTT(board_diff, board)
-                while not self.board_move_done:
-                    self.client.loop()
-                self.board_move_done = False
             board = new_board
         if verbose:
             assert self.display
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
             self.display(board)
-        self.client.disconnect()
+        if self.use_mqtt:
+            time.sleep(5)
+            self.client.publish("/reset", b'', qos=2)
+            self.client.disconnect()
         return curPlayer * self.game.getGameEnded(board, curPlayer)
 
     def playGames(self, num, verbose=False):
