@@ -2,6 +2,9 @@ Using Sphero robots to play Go.
 
 ## Running the game
 
+Enable access to X11 from the container:   
+`xhost local:root`
+
 Use [the rspg docker image](https://hub.docker.com/repository/docker/ymyrvolod/rspg) if you are using linux with X11 display manager.
 This will start the game against the pre-trained alphazero model:   
 `docker run -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY -h $HOSTNAME -it rspg`   
