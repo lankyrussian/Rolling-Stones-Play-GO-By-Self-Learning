@@ -1,5 +1,15 @@
 Using Sphero robots to play Go.
 
+## Running the game
+
+Use [the rspg docker image](https://hub.docker.com/repository/docker/ymyrvolod/rspg) if you are using linux with X11 display manager.
+This will start the game against the pre-trained alphazero model:   
+`docker run -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY -h $HOSTNAME -it rspg`   
+Switch back to the terminal after you see the simulator window appear, enter stone coordinates separated by space.
+
+Alternatively, setup each individual component as described below.
+After the setup, start the pathplanner, goboard, then the mujoco simulator.
+
 ## goboard
 
 go game engine implementation of the interface from [alpha-zero-general](https://github.com/suragnair/alpha-zero-general).
@@ -16,9 +26,10 @@ If using Nvidia GPU:
 `conda create --name rlpg --file env.txt`
 
 ### run
-`python src/playgo.py` - against latest trained agent in ./src/pretrained/    
+`python src/playgo.py` - against latest trained agent. Pre-trained agent has to be located in `./src/pretrained/`    
 `python src/playgo.py --player2 r` - against random agent   
-`python src/playgo.py --player2 h` - against another player   
+`python src/playgo.py --player2 h` - against another player
+`python src/playgo.py --player1 a --player2 a` - watch ai against ai
 
 ### test
  
@@ -39,8 +50,7 @@ install mosquitto:
 `cd pathplanning ; make`
 
 ### run   
-`./PathPlanner`   
-Run this before starting the virtual board
+`./PathPlanner`
 
 ## mujocoboard
 
@@ -56,7 +66,7 @@ make sure the LD_PRELOAD env variable is setup to render mujoco:
 `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so`
 
 ### run
-make a go virtual board environment xml with a initial stone placement:    
+(optional) make a go virtual board environment xml with a initial stone placement:    
 `python make_env.py`   
 
 run the mujoco simulation using board.xml:    

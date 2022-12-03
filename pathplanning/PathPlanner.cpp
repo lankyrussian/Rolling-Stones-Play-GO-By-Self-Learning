@@ -34,13 +34,16 @@ void PathFinder::MqttLoop()
 		return;
 	}
 	mosquitto_loop_start(_mqtt);
-	printf("Press Enter to quit...\n");
-	getchar();
-	mosquitto_loop_stop(_mqtt, true);
-
-	mosquitto_disconnect(_mqtt);
-	mosquitto_destroy(_mqtt);
-	mosquitto_lib_cleanup();
+	printf("Started Path Planner...\n");
+	while(1)
+    {
+        getchar();
+    }
+//	mosquitto_loop_stop(_mqtt, true);
+//
+//	mosquitto_disconnect(_mqtt);
+//	mosquitto_destroy(_mqtt);
+//	mosquitto_lib_cleanup();
 }
 
 void PathFinder::OnConnect(struct mosquitto *msqt, void *obj, int reason)

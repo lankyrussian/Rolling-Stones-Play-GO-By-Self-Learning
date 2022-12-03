@@ -205,13 +205,10 @@ class VirtualGoBoardMQTT:
                     self.running_sphero = None
                     # notify the go board that the move is finished
                     # so the next move can be executed
-                    print("waiting for a path...")
                     self.client.publish("/boardmovedone", "", qos=2)
             else:
                 if not self.path_queue.empty():
                     pathcolor = self.path_queue.get()
-                    print("new path ", pathcolor)
-                    print("simplified path ", simplifyPath(pathcolor[0]))
                     path =  simplifyPath(pathcolor[0])  #pathcolor[0]
                     color = pathcolor[1]
                     # starting coordinate
