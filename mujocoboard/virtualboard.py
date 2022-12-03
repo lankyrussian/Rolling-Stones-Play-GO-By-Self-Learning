@@ -9,6 +9,7 @@ the box doesn't have joints, it's fixed and can't be pushed around.
 import struct
 import threading
 
+import glfw
 from mujoco_py import load_model_from_path, MjSim, MjViewer
 import math
 import numpy as np
@@ -78,7 +79,7 @@ class Sphero:
         self.model = model
         self.sim = sim
         self.vel_integ = np.zeros(3)
-        self.vel_integ_gamma = 0.5
+        self.vel_integ_gamma = 0.8
 
     def getPos(self):
         return self.sim.data.body_xpos[self.robot_id]
@@ -98,7 +99,7 @@ class Sphero:
         # get the distance to target
         dist = math.sqrt((pos[0] - target_x)**2 + (pos[1] - target_y)**2)
         # check if target is reached
-        if dist < 0.02 and abs(vel[0]) < 0.01 and abs(vel[1]) < 0.01:
+        if dist < 0.02 and abs(vel[0]) < 0.02 and abs(vel[1]) < 0.02:
             self.centered = True
             self.sim.data.xfrc_applied[self.robot_id] = np.zeros_like(
                 self.sim.data.xfrc_applied[self.robot_id])
@@ -107,8 +108,8 @@ class Sphero:
             # get the direction to target
             dir_x = (target_x - pos[0])
             dir_y = (target_y - pos[1])
-            torque_x = 5*dir_x - 0.5* vel[0] - self.vel_integ[0]
-            torque_y = 5*dir_y - 0.5* vel[1] - self.vel_integ[1]
+            torque_x = np.clip(10*dir_x - 1.5* vel[0] - self.vel_integ[0], -4, 4)
+            torque_y = np.clip(10*dir_y - 1.5* vel[1] - self.vel_integ[1], -4, 4)
             # apply the force
             self.sim.data.xfrc_applied[self.robot_id] = [
                 0, 0, 0,
@@ -124,15 +125,6 @@ class Sphero:
         cmd = self.cmd_queue.get()
         self.x = cmd[1]
         self.y = cmd[0]
-        # # roll several steps if coordinates are on the same line
-        # while not self.cmd_queue.empty():
-        #     next_cmd = self.cmd_queue.peek()
-        #     if cm:
-        #         self.cmd_queue.get()
-        #         self.x = cmd[1]
-        #         self.y = cmd[0]
-        #     else:
-        #         break
         self.x = np.clip(self.x, 0, LOGIC_LEN-1)
         self.y = np.clip(self.y, 0, LOGIC_LEN-1)
         return False
@@ -147,6 +139,19 @@ class Sphero:
         else:
             self.model.geom_rgba[self.robot_id - 1] = (0.5, 0.5, 0.5, 0.75)
 
+def simplifyPath(coords):
+    """remove coordinates between two points of a line
+    """
+    if len(coords) < 2:
+        return coords
+    new_coords = [coords[0]]
+    for i in range(1, len(coords)-1):
+        if coords[i][0] == coords[i-1][0] == coords[i+1][0] or coords[i][1] == coords[i-1][1] == coords[i+1][1]:
+            continue
+        else:
+            new_coords.append(coords[i])
+    new_coords.append(coords[-1])
+    return new_coords
 
 class VirtualGoBoardMQTT:
     def __init__(self):
@@ -206,7 +211,8 @@ class VirtualGoBoardMQTT:
                 if not self.path_queue.empty():
                     pathcolor = self.path_queue.get()
                     print("new path ", pathcolor)
-                    path =  pathcolor[0]
+                    print("simplified path ", simplifyPath(pathcolor[0]))
+                    path =  simplifyPath(pathcolor[0])  #pathcolor[0]
                     color = pathcolor[1]
                     # starting coordinate
                     cy, cx = path[0]
@@ -236,6 +242,7 @@ class VirtualGoBoardMQTT:
 
             self.sim.step()
             self.viewer.render()
+        glfw.destroy_window(self.viewer.window)
 
     def sendUpdatedMap(self, map):
         occupied = (map != -1).astype(np.int32)

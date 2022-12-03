@@ -85,9 +85,6 @@ class ArenaMQTT():
                 draw result returned from the game that is neither 1, -1, nor 0.
         """
         if self.use_mqtt:
-            self.client.connect(self.broker, self.port)
-            self.client.subscribe("/boardmovedone")
-            self.client.on_message = self.handleBoardMoveDone
             # wait for the board to be ready
             while not self.board_move_done:
                 self.client.loop()
@@ -124,7 +121,7 @@ class ArenaMQTT():
         if self.use_mqtt:
             time.sleep(5)
             self.client.publish("/reset", b'', qos=2)
-            self.client.disconnect()
+            self.board_move_done = False
         return curPlayer * self.game.getGameEnded(board, curPlayer)
 
     def playGames(self, num, verbose=False):
@@ -137,7 +134,10 @@ class ArenaMQTT():
             twoWon: games won by player2
             draws:  games won by nobody
         """
-
+        if self.use_mqtt:
+            self.client.connect(self.broker, self.port)
+            self.client.subscribe("/boardmovedone")
+            self.client.on_message = self.handleBoardMoveDone
         num = int(num / 2)
         oneWon = 0
         twoWon = 0
@@ -161,5 +161,6 @@ class ArenaMQTT():
                 twoWon += 1
             else:
                 draws += 1
-
+        if self.use_mqtt:
+            self.client.disconnect()
         return oneWon, twoWon, draws
