@@ -28,7 +28,7 @@ If using Nvidia GPU:
 ### run
 `python src/playgo.py` - against latest trained agent. Pre-trained agent has to be located in `./src/pretrained/`    
 `python src/playgo.py --player2 r` - against random agent   
-`python src/playgo.py --player2 h` - against another player
+`python src/playgo.py --player2 h` - against another player    
 `python src/playgo.py --player1 a --player2 a` - watch ai against ai
 
 ### test
